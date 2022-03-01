@@ -1,0 +1,5899 @@
+# Copyright (c) 2022 Seagate Technology LLC and/or its Affiliates
+
+# Permission is hereby granted, free of charge, to any person obtaining a copy
+# of this software and associated documentation files (the "Software"), to
+# deal in the Software without restriction, including without limitation the
+# rights to use, copy, modify, merge, publish, distribute, sublicense, and/or
+# sell copies of the Software, and to permit persons to whom the Software is
+# furnished to do so, subject to the following conditions:
+
+# The above copyright notice and this permission notice shall be included in
+# all copies substantial portions of the Software.
+
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
+# FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
+# DEALINGS IN THE SOFTWARE.
+
+openapi: 3.0.0
+info:
+  title: Lyve Pilot Orchestration REST API
+  description: This API provides access to all Lyve Pilot orchestration management capabilities.
+  version: 1.7.0
+                                 
+
+servers:
+  - url: https://api.lyve.seagate.com/{customerId}/
+    description: The API entry point to your unique customer instance
+
+
+
+tags:
+  - name: root
+    description: API Information
+  - name: devices
+    description: Used to manage device hardware information and status
+  - name: volumes
+    description: Volume operations for the device
+  - name: activity
+    description: Activities for the device
+  - name: users
+    description: Used to manage users in the Lyve Pilot domain
+  - name: registration
+    description: Used to manage registration of a Lyve Pilot device
+  - name: feed
+    description: Used to get feed elements to display to the client
+  - name: endpoints
+    description: Used to manage data endpoints
+  - name: metadata
+    description: Used to query metadata stored in the Lyve Pilot domain
+  - name: bundles
+    description: Used to manage data bundles
+  - name: system
+    description: Used to manage system settings
+
+paths:
+  /:
+    get:
+      description: Endpoint connectivity check
+      responses:
+        '200':
+          description: Endpoint connectivity verified
+  /api-docs:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - root
+      description: Return the API description
+      responses:
+        '200':
+          description: The details for the REST API
+  /udx/v1:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - root
+      description: Return all REST route endpoints for this API
+      responses:
+        '200':
+          description: The list of REST route endpoints
+  /udx/v1/version:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - root
+      description: Return the Lyve Pilot version and revision
+      responses:
+        '200':
+          description: The Lyve Pilot version and revision
+        '500':
+          description: Internal Server Error. Unable to find and read the version and revision from the Lyve Pilot Version file
+  /udx/v1/SeagateTermsAndConditionsAndPrivacyPolicy:
+    get:
+      tags:
+        - users
+      description: Status of user confirmation of Seagate's Terms and Conditions and Privacy Policy
+      responses:
+        '200':
+          description: Customer has agreed to Seagate's Terms and Conditions and Privacy Policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EULASuccessResponse'
+        '403':
+          description: User has not yet agreed to Seagate's Terms and Conditions and Privacy Policy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EULAResponse'
+        '500':
+          description: >-
+            Internal Server Error.
+            Examples:
+              - MissingSchemaError:
+                Thrown when you try to access a model that has not been registered yet.
+              - ValidationError:
+                An instance of this error class will be returned when validation failed.
+                The errors property contains an object whose keys are the paths that
+                failed and whose values are instances of CastError or ValidationError.
+              - OverwriteModelError:
+                Thrown when a model with the given name was already registered on the connection.
+  /udx/v1/firstUser:
+    get:
+      tags:
+        - users
+      description: Return information about the state of the initial (break glass) user provided to manage an instance
+      responses:
+        '200':
+          description: The first user has been successfully created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FirstUserComplete'
+        '500':
+          description: >-
+            Internal Server Error.
+            Examples:
+              - MissingSchemaError:
+                Thrown when you try to access a model that has not been registered yet.
+              - ValidationError:
+                An instance of this error class will be returned when validation failed.
+                The errors property contains an object whose keys are the paths that
+                failed and whose values are instances of CastError or ValidationError.
+              - OverwriteModelError:
+                Thrown when a model with the given name was already registered on the connection.
+    post:
+      tags:
+        - users
+      description: Create the first administrator user for Lyve Pilot (deprecated in favor of saasFirstUser - do not use)
+      requestBody:
+        description: Example of payload to create the initial (break glass) user
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/FirstUserPayload'
+      responses:
+        '200':
+          description: >-
+            Creates the first administrator user. Returns a valid JWT user session token
+            and automatically logs the new user into Lyve Pilot. The caller must
+            agree to Seagate's Terms and Conditions and Privacy Policy
+            as part of this request.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: >-
+            Bad request error.
+            Examples:
+              - "The phone does not pass validation rules"
+              - "The email does not pass validation rules"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+                  data:
+                    $ref: '#/components/schemas/LoginUser'
+        '500':
+          description: >-
+            Internal Server Error.
+            Examples:
+              - MissingSchemaError:
+                Thrown when you try to access a model that has not been registered yet.
+              - ValidationError:
+                An instance of this error class will be returned when validation failed.
+                The errors property contains an object whose keys are the paths that
+                failed and whose values are instances of CastError or ValidationError.
+              - OverwriteModelError:
+                Thrown when a model with the given name was already registered on the connection.
+  /udx/v1/saasFirstUser:
+    post:
+      tags:
+        - users
+      description: Create the first administrator (break glass) user for SaaS Lyve Pilot
+      requestBody:
+        description: Example of payload to create the First User on SaaS
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SaasFirstUserPayload'
+      responses:
+        '200':
+          description: >-
+            Creates the first administrator. Returns the user profile and
+            a valid One Time Code (OTC).
+            The caller must agree to Seagate's Terms and Conditions and Privacy Policy
+            using the OTC.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+        '400':
+          description: >-
+            Bad request error.
+            Examples:
+              - "The phone does not pass validation rules"
+              - "The email does not pass validation rules"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+                  data:
+                    $ref: '#/components/schemas/LoginUser'
+        '500':
+          description: >-
+            Internal Server Error.
+            Examples:
+              - MissingSchemaError:
+                Thrown when you try to access a model that has not been registered yet.
+              - ValidationError:
+                An instance of this error class will be returned when validation failed.
+                The errors property contains an object whose keys are the paths that
+                failed and whose values are instances of CastError or ValidationError.
+              - OverwriteModelError:
+                Thrown when a model with the given name was already registered on the connection.
+  /udx/v1/acceptEULAByUser:
+    post:
+      tags:
+        - users
+      description: Endpoint to accept Seagate's Terms and Conditions and Privacy Policy by User
+      requestBody:
+        description: Example of payload to accept Seagate's Terms and Conditions and Privacy Policy
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/acceptEULAByUserPayload'
+      responses:
+        '200':
+          description: >-
+            Returns a temporary JSON Web Token (JWT) to set the new password
+            and update the user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateOTC'
+  /udx/v1/saasUser:
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - users
+      description: Register a new SaaS user. Only an Admin user can perform this operation.
+      operationId: register_new_saas_user
+      requestBody:
+        description: Register new SaaS user
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterUser'
+      responses:
+        '200':
+          description: The user information.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+        '500':
+          description: >-
+            Internal Server Error
+            Examples:
+              - CastError:
+                An instance of this error class will be returned when mongoose failed to
+                cast a value.
+              - MissingSchemaError:
+                Thrown when you try to access a model that has not been registered yet.
+              - ValidationError:
+                An instance of this error class will be returned when validation failed.
+                The errors property contains an object whose keys are the paths that
+                failed and whose values are instances of CastError or ValidationError.
+              - ValidatorError:
+                A ValidationError has a hash of errors that contain individual
+                ValidatorError instances.
+              - OverwriteModelError:
+                Thrown when a model with the given name was already registered on the connection.
+              - ParallelSaveError:
+                An instance of this error class will be returned when you call save()
+                multiple times on the same document in parallel.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/InternalServerError'
+                  data:
+                    $ref: '#/components/schemas/RegisterUser'
+        '401':
+          description: >-
+            401 Unauthorized Error:
+              The HTTP 401 Unauthorized client error status response
+              code indicates that the request has not been applied because
+              it lacks valid authentication credentials for the target resource.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/UnauthorizedRequestError'
+  /udx/v1/setSaasPassword:
+    post:
+      tags:
+        - users
+      description: Set the password and update user profile.
+      requestBody:
+        description: Example of payload to set the new password.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/setSaasPasswordPayload'
+      responses:
+        '200':
+          description: >-
+            Set a new password. The user must include the
+            token provided from acceptEULAByUser.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+  /udx/v1/login:
+    post:
+      tags:
+        - users
+      description: Login user
+      operationId: Login new user
+      requestBody:
+        description: Login user
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginUser'
+      responses:
+        '200':
+          description: The user information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+                  data:
+                    $ref: '#/components/schemas/LoginUser'
+        '500':
+          description: >-
+            Internal Server Error.
+            Examples:
+              - CastError:
+                An instance of this error class will be returned when mongoose failed to
+                cast a value.
+              - MissingSchemaError:
+                Thrown when you try to access a model that has not been registered yet.
+              - ValidationError:
+                An instance of this error class will be returned when validation failed.
+                The errors property contains an object whose keys are the paths that
+                failed and whose values are instances of CastError or ValidationError.
+              - ValidatorError:
+                A ValidationError has a hash of errors that contain individual
+                ValidatorError instances.
+              - OverwriteModelError:
+                Thrown when a model with the given name was already registered on the connection.
+              - ParallelSaveError:
+                An instance of this error class will be returned when you call save()
+                multiple times on the same document in parallel.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/InternalServerError'
+                  data:
+                    $ref: '#/components/schemas/RegisterUser'
+  /udx/v1/users:
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - users
+      description: (Deprecated in favor of a POST to saasUser route) - do not use
+      operationId: register_new_user
+      requestBody:
+        description: Register new user
+        required: true 
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterUser'
+      responses:
+        '200':
+          description: The user information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+        '500':
+          description: >-
+            Internal Server Error
+            Examples:
+              - CastError:
+                An instance of this error class will be returned when mongoose failed to
+                cast a value.
+              - MissingSchemaError:
+                Thrown when you try to access a model that has not been registered yet.
+              - ValidationError:
+                An instance of this error class will be returned when validation failed.
+                The errors property contains an object whose keys are the paths that
+                failed and whose values are instances of CastError or ValidationError.
+              - ValidatorError:
+                A ValidationError has a hash of errors that contain individual
+                ValidatorError instances.
+              - OverwriteModelError:
+                Thrown when a model with the given name was already registered on the connection.
+              - ParallelSaveError:
+                An instance of this error class will be returned when you call save()
+                multiple times on the same document in parallel.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/InternalServerError'
+                  data:
+                    $ref: '#/components/schemas/RegisterUser'
+        '401':
+          description: >-
+            401 Unauthorized Error:
+              The HTTP 401 Unauthorized client error status response
+              code indicates that the request has not been applied because
+              it lacks valid authentication credentials for the target resource.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/UnauthorizedRequestError'
+        '400':
+          description: >-
+            Bad request error. Error cases:
+              - When trying to create an user which already exists.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - users
+      description: Get a list of users
+      operationId: get_users
+      responses:
+        '200':
+          description: The list of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserInfo'
+        '400':
+          description: >-
+            Bad request error.
+            Examples:
+              - MissingSchemaError:
+                Thrown when you try to access a model that has not been registered yet.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '401':
+          description: >-
+            401 Unauthorized Error:
+              The HTTP 401 Unauthorized client error status response
+              code indicates that the request has not been applied because
+              it lacks valid authentication credentials for the target resource.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/UnauthorizedRequestError'
+  '/udx/v1/users/{userId}':
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - users
+      description: Get user by User id
+      operationId: get_user_by_id
+      parameters:
+        - $ref: '#/components/parameters/userIdParameter'
+      responses:
+        '200':
+          description: The user entry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+        '400':
+          description: >-
+            Bad request error.
+            Examples:
+              - CastError:
+                An instance of this error class will be returned when mongoose failed to
+                cast a value.
+              - MissingSchemaError:
+                Thrown when you try to access a model that has not been registered yet.
+              - ValidationError:
+                An instance of this error class will be returned when validation failed.
+                The errors property contains an object whose keys are the paths that
+                failed and whose values are instances of CastError or ValidationError.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: >-
+            The user id was not found.
+            Examples:
+              - DocumentNotFoundError:
+                An instance of this error class will be returned when get
+                operation fails because the underlying document was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '401':
+          description: >-
+            401 Unauthorized Error:
+              The HTTP 401 Unauthorized client error status response
+              code indicates that the request has not been applied because
+              it lacks valid authentication credentials for the target resource.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/UnauthorizedRequestError'
+    patch:
+      security:
+        - bearerAuth: []
+      tags:
+        - users
+      description: Update user entry by id
+      operationId: update_user_by_id
+      parameters:
+        - $ref: '#/components/parameters/userIdParameter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdate'
+      responses:
+        '200':
+          description: The user entry was updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserInfo'
+        '400':
+          description: >-
+            Bad request error.
+            Examples:
+              - CastError:
+                An instance of this error class will be returned when mongoose failed to
+                cast a value.
+              - MissingSchemaError:
+                Thrown when you try to access a model that has not been registered yet.
+              - ValidationError:
+                An instance of this error class will be returned when validation failed.
+                The errors property contains an object whose keys are the paths that
+                failed and whose values are instances of CastError or ValidationError.
+              - ValidatorError:
+                A ValidationError has a hash of errors that contain individual
+                ValidatorError instances.
+              - OverwriteModelError:
+                Thrown when a model with the given name was already registered on the connection.
+              - ParallelSaveError:
+                An instance of this error class will be returned when you call save()
+                multiple times on the same document in parallel.
+              - MissingPasswordFields:
+                To change your password, you have to provide your current password and the new password.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: >-
+            The user id was not found.
+            Examples:
+              - DocumentNotFoundError:
+                An instance of this error class will be returned when patch
+                operation fails because the underlying document was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '401':
+          description: >-
+            401 Unauthorized Error:
+              The HTTP 401 Unauthorized client error status response
+              code indicates that the request has not been applied because
+              it lacks valid authentication credentials for the target resource.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/UnauthorizedRequestError'
+    delete:
+      security:
+        - bearerAuth: []
+      tags:
+        - users
+      description: Delete user by user id
+      operationId: delete_user_by_id
+      parameters:
+        - $ref: '#/components/parameters/userIdParameter'
+      responses:
+        '200':
+          description: The user was deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserActionConfirmation'
+        '400':
+          description: >-
+            Bad request error.
+            Examples:
+              - CastError:
+                An instance of this error class will be returned when mongoose failed to
+                cast a value.
+              - MissingSchemaError:
+                Thrown when you try to access a model that has not been registered yet.
+              - ValidationError:
+                An instance of this error class will be returned when validation failed.
+                The errors property contains an object whose keys are the paths that
+                failed and whose values are instances of CastError or ValidationError.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: >-
+            The user id was not found.
+            Examples:
+              - DocumentNotFoundError:
+                An instance of this error class will be returned when delete
+                operation fails because the underlying document was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '401':
+          description: >-
+            401 Unauthorized Error:
+              The HTTP 401 Unauthorized client error status response
+              code indicates that the request has not been applied because
+              it lacks valid authentication credentials for the target resource.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/UnauthorizedRequestError'
+  '/udx/v1/users/{userId}/disableUser':
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - users
+      description: >-
+        Disable the user by user id. This will block the user from logging in.
+        User configuration will remain intact while a user is disabled.
+      operationId: disable_user
+      parameters:
+        - $ref: '#/components/parameters/userIdParameter'
+      responses:
+        '200':
+          description: The user was disabled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserActionConfirmation'
+        '400':
+          description: >-
+            Bad request error.
+            Examples:
+              - CastError:
+                An instance of this error class will be returned when mongoose failed to
+                cast a value.
+              - MissingSchemaError:
+                Thrown when you try to access a model that has not been registered yet.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: >-
+            The user id was not found.
+            Examples:
+              - DocumentNotFoundError:
+                An instance of this error class will be returned when disable
+                operation fails because the underlying document was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '401':
+          description: >-
+            401 Unauthorized Error:
+              The HTTP 401 Unauthorized client error status response
+              code indicates that the request has not been applied because
+              it lacks valid authentication credentials for the target resource.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/UnauthorizedRequestError'
+  '/udx/v1/users/{userId}/enableUser':
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - users
+      description: >-
+        Enable user by user id. This will restore a user and allow
+        login for users that were previously disabled.
+        All user configuration remains intact.
+      operationId: enable_user
+      parameters:
+        - $ref: '#/components/parameters/userIdParameter'
+      responses:
+        '200':
+          description: The user was enabled successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserActionConfirmation'
+        '400':
+          description: >-
+            Bad request error.
+            Examples:
+              - CastError:
+                An instance of this error class will be returned when mongoose failed to
+                cast a value.
+              - MissingSchemaError:
+                Thrown when you try to access a model that has not been registered yet.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: >-
+            The user id was not found.
+            Examples:
+              - DocumentNotFoundError:
+                An instance of this error class will be returned when enable
+                operation fails because the underlying document was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '401':
+          description: >-
+            401 Unauthorized Error:
+              The HTTP 401 Unauthorized client error status response
+              code indicates that the request has not been applied because
+              it lacks valid authentication credentials for the target resource.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/UnauthorizedRequestError'
+  '/udx/v1/users/{userId}/resetPassword':
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - users
+      description: Admin only. Reset password for the given user. This will generate a new One-Time-Token, which will need to be shared with the user to re-login.
+      operationId: reset_password
+      parameters:
+        - $ref: '#/components/parameters/userIdParameter'
+      responses:
+        '200':
+          description: The list of users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResetPassword'
+        '400':
+          description: >-
+            Bad request error.
+            Examples:
+              - CastError:
+                An instance of this error class will be returned when mongoose failed to
+                cast a value.
+              - MissingSchemaError:
+                Thrown when you try to access a model that has not been registered yet.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: >-
+            The user id was not found.
+            Examples:
+              - DocumentNotFoundError:
+                An instance of this error class will be returned when reset password
+                operation fails because the underlying document was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '401':
+          description: >-
+            401 Unauthorized Error:
+              The HTTP 401 Unauthorized client error status response
+              code indicates that the request has not been applied because
+              it lacks valid authentication credentials for the target resource.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/UnauthorizedRequestError'
+  /udx/v1/setPassword:
+    post:
+      tags:
+        - users
+      description: >-
+        Set a new password. The user must include the
+        token provided from validateOTC. Passwords may
+        only be reset by the user themselves.
+      operationId: set_password
+      requestBody:
+        description: Payload to set a new password
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SetPassword'
+      responses:
+        '200':
+          description: User password was updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserActionConfirmation'
+        '400':
+          description: >-
+            Bad request error.
+            Examples:
+              - CastError:
+                An instance of this error class will be returned when mongoose failed to
+                cast a value.
+              - MissingSchemaError:
+                Thrown when you try to access a model that has not been registered yet.
+              - Decoding Error:
+                Thrown when JWT library try to decode an invalid token.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+  /udx/v1/validateOTC:
+    post:
+      tags:
+        - users
+      description: >-
+        Validate One Time Code token. This will expire the token and
+        issue a temporary authorization token to set the user password.
+        This must be called by the user themselves.
+      operationId: validate_otc
+      requestBody:
+        description: Payload to set a new password
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateOTCRequest'
+      responses:
+        '200':
+          description: >-
+            The OTC token was successfully validated, and a temporary
+            authorization token was returned to be used in setPassword.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidateOTC'
+        '400':
+          description: >-
+            Bad request error.
+            Examples:
+              - CastError:
+                An instance of this error class will be returned when mongoose failed to
+                cast a value.
+              - MissingSchemaError:
+                Thrown when you try to access a model that has not been registered yet.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: User id not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+  /udx/v1/refreshToken:
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - users
+      description: >- 
+        Refresh the authentication token. This allows the websocket to remain open with the user needing to log back in.  
+        Any application should plan to refresh this token before its 15-minute expiration, or re-login will be required by the user.  
+        The previous token will be invalid upon refresh.
+      requestBody:
+        description: Get the refresh token
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RefreshToken'
+      responses:
+        '200':
+          description: Token renew successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+  /udx/v1/roles:
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - users
+      description: User Role
+      operationId: create_user_roles
+      requestBody:
+        description: The User Role information
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserRole'
+      responses:
+        '200':
+          description: The User Role name and permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRole'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+                  data:
+                    $ref: '#/components/schemas/UserRole'
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - users
+      description: User Roles
+      operationId: get_user_roles
+      responses:
+        '200':
+          description: The list of User Roles
+          content:
+            application /json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/UserRole'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+  '/udx/v1/roles/{userRoleId}':
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - users
+      description: User Roles
+      operationId: get_user_role_by_id
+      parameters:
+        - $ref: '#/components/parameters/userRoleIdParameter'
+      responses:
+        '200':
+          description: The single User Roles by id
+          content:
+            application /json:
+              schema:
+                type: object
+                items:
+                  $ref: '#/components/schemas/UserRole'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+    patch:
+      security:
+        - bearerAuth: []
+      tags:
+        - users
+      description: Update information on a single User Role by id
+      operationId: update_user_role_by_id
+      parameters:
+        - $ref: '#/components/parameters/userRoleIdParameter'
+      requestBody:
+        description: User Role information to be changed
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRole'
+      responses:
+        '200':
+          description: The User Role updated information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserRole'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+                  data:
+                    $ref: '#/components/schemas/UpdateUserRole'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+  /udx/v1/activity:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - activity
+      description: Retrieve a list of all activities matching the criteria set in the included parameters.
+      operationId: get_activities
+      parameters:
+        - $ref: '#/components/parameters/udsTaskIdFilterParameter'
+        - $ref: '#/components/parameters/nameFilterParameter'
+        - $ref: '#/components/parameters/typeFilterParameter'
+        - $ref: '#/components/parameters/stateFilterParameter'
+        - $ref: '#/components/parameters/dataSizeFilterParameter'
+        - $ref: '#/components/parameters/udxDataObjectCountFilterParameter'
+        - $ref: '#/components/parameters/timestampBeginFilterParameter'
+        - $ref: '#/components/parameters/timestampEndFilterParameter'
+        - $ref: '#/components/parameters/lastSyncTimeFilterParameter'
+        - $ref: '#/components/parameters/sourceVolumeUuidFilterParameter'
+        - $ref: '#/components/parameters/sourceDeviceUuidFilterParameter'
+        - $ref: '#/components/parameters/sourceVolumeNameFilterParameter'
+        - $ref: '#/components/parameters/sourceDeviceNameFilterParameter'
+        - $ref: '#/components/parameters/sourceUriFilterParameter'
+        - $ref: '#/components/parameters/destinationVolumeUuidFilterParameter'
+        - $ref: '#/components/parameters/destinationDeviceUuidFilterParameter'
+        - $ref: '#/components/parameters/destinationVolumeNameFilterParameter'
+        - $ref: '#/components/parameters/destinationDeviceNameFilterParameter'
+        - $ref: '#/components/parameters/destinationUriFilterParameter'
+        - $ref: '#/components/parameters/deletedFilterParameter'
+        - $ref: '#/components/parameters/quarantineFilterParameter'
+      responses:
+        '200':
+          description: The list of activities
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+  '/udx/v1/activity/{activityId}':
+    get:
+      description: Retrieve a single activity instance using the activityId
+      security:
+        - bearerAuth: []
+      tags:
+        - activity
+      parameters:
+      - $ref: '#/components/parameters/activityIdParameter'
+      responses:
+        '200':
+          description: activity object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+  /udx/v1/activity/{activityId}/verifyBundle:
+    post:
+      security:
+        - bearerAuth: []
+      description: >-
+        Start a new Verify activity on a bundle targeted by a previous activity. A verify will 
+        check the integrity of the data from the activity chosen. Verify failures will result 
+        in quarantined data. If the activityId is the id of a DATA-IMPORT,
+        DATA-COPY, or DATA-EXPORT, the verify will be performed on the bundle created by that
+        activity. If the activityId is the id of a DATA-VERIFY activity, then the verify will
+        be performed again on the same bundle. If the activityId is the id of a DATA-TRUST
+        activity, then the verify will be performed on the new bundle that the trust operation
+        created.
+      operationId: verifyBundle
+      tags:
+        - activity
+      parameters:
+      - $ref: '#/components/parameters/activityIdParameter'
+      responses:
+        '200':
+          description: >-
+            Verify operation was started successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+        '409':
+          description: The requested activity was of type DATA-DELETE. Cannot perform verify operation with requested activity type
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: Requested activityId references a DATA-DELETE activity. Cannot perform a verify activity on a DATA-DELETE activity.
+        '500':
+          description: >-
+            Internal Server Error
+            Examples:
+              - CastError:
+                An instance of this error class will be returned when mongoose failed to
+                cast a value.
+              - MissingSchemaError:
+                Thrown when you try to access a model that has not been registered yet.
+              - ValidationError:
+                An instance of this error class will be returned when validation failed.
+                The errors property contains an object whose keys are the paths that
+                failed and whose values are instances of CastError or ValidationError.
+              - ValidatorError:
+                A ValidationError has a hash of errors that contain individual
+                ValidatorError instances.
+              - OverwriteModelError:
+                Thrown when a model with the given name was already registered on the connection.
+              - ParallelSaveError:
+                An instance of this error class will be returned when you call save()
+                multiple times on the same document in parallel.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/InternalServerError'
+  '/udx/v1/activity/{activityId}/trustBundle':
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - activity
+      description: >-
+        Trust the contents of a quarantined bundle. This action will result in the generation of a new
+        bundle and the previous, quarantined bundle will be deleted. Lyve Pilot will maintain a record
+        of the previous bundle, but you will no longer have access to data in that bundle.
+      parameters:
+      - $ref: '#/components/parameters/activityIdParameter'
+      responses:
+        '201':
+          description: The bundle trust operation started successfully, returns Activity object of Trust activity.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '409':
+          description: The requested bundle is not quarantined. The trust operation can only be performed on a quarantined bundle.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: Cannot perform trust on bundle that has not been quarantined
+  '/udx/v1/activity/{activityId}/deleteBundle':
+    delete:
+      security:
+        - bearerAuth: []
+      tags:
+        - activity
+      description: Delete a bundle
+      parameters:
+      - $ref: '#/components/parameters/activityIdParameter'
+      responses:
+        '200':
+          description: activity object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Activity'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '409':
+          description: Conflict error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+                    example: This bundle has been deleted before
+                  data:
+                    $ref: '#/components/schemas/Activity'
+  '/udx/v1/activity/{activityId}/chain':
+    get:
+      security:
+        - bearerAuth: []
+      description: >-
+        Get the chain of activities for the bundle targeted by the given activity.  The chain will start at the 
+        most recent activity and link backwards to the import of this data.
+      tags:
+        - activity
+      parameters:
+      - $ref: '#/components/parameters/activityIdParameter'
+      responses:
+        '200':
+          description: >-
+            Get Activity chain list by Activity ID
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Activity'
+  '/udx/v1/activity/{activityId}/metadata':
+    get:
+      security:
+        - bearerAuth: []
+      description: >-
+        Get UDS Metadata objects by Activity Id
+      operationId: get_metadata_by_activity_id
+      tags:
+        - activity
+        - metadata
+      parameters:
+      - $ref: '#/components/parameters/activityIdParameter'
+      responses:
+        '200':
+          description: >-
+            List of UDS Metadata objects related
+            to the given Activity.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Metadata'
+  '/udx/v1/activity/{activityId}/manifest':
+    get:
+      security:
+        - bearerAuth: []
+      description: >-
+        Get the list of files in the bundle associated with the given Activity Id
+      operationId: get_manifest_by_activity_id
+      tags:
+        - activity
+        - metadata
+      parameters:
+      - $ref: '#/components/parameters/activityIdParameter'
+      responses:
+        '200':
+          description: >-
+            The list of files is returned successfully.
+            An empty list is valid and indicates zero files in the bundle.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BundleFile'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '503':
+          description: >-
+            Device is busy after multiple retries attempted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/ServiceUnavailable'
+        '500':
+          description: >-
+            Device returns an unexpected error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/InternalServerError'
+  '/udx/v1/activity/{activityId}/abort':
+    put:
+      security:
+        - bearerAuth: []
+      description: >-
+        Abort a currently executing data activity by its Activity Id
+      operationId: abortActivity
+      tags:
+        - activity
+      parameters:
+        - $ref: '#/components/parameters/activityIdParameter'
+      responses:
+        '200':
+          description: >-
+            Abort request was received by the targeted device.
+            Returns activity details for the activity that is being aborted.
+            The status of the abort will be reported in the activity state.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UDSTask'
+        '400':
+          description: >-
+            Bad request status received from target device.
+            An invalid task ID was supplied to the target device.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '403':
+          description: >-
+            Abort request was rejected by targeted device.
+            Device reported that Abort was not allowed for the activity.
+            The activity was either completed or deleted already.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ForbiddenError'
+        '404':
+          description: No activity found matching provided Activity ID
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+  /udx/v1/import:
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - activity
+      description: Start an activity to import data from a specified location
+      operationId: start_import
+      requestBody:
+        description: The import information
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateImport'
+      responses:
+        '200':
+          description: Import operation was started successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UDSTask'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+                  data:
+                    $ref: '#/components/schemas/CreateImport'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: >-
+            Internal Server Error. Error case:
+              - Unable to complete operation as orchestrationMode value is not yet supported
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/InternalServerError'
+        '408':
+          description: Request timeout error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/RequestTimeoutError'
+  /udx/v1/copy:
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - activity
+      description: Start an activity to copy data from one Lyve Pilot managed location to another.
+      operationId: start_copy
+      requestBody:
+        description: The copy information
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCopy'
+      responses:
+        '200':
+          description: Copy operation was started successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CopyAndExportSuccessResult'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+                  data:
+                    $ref: '#/components/schemas/CreateCopy'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '408':
+          description: Request timeout error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/RequestTimeoutError'
+        '500':
+          description: >-
+            Internal Server Error. Error cases:
+              - Internal error: cannot access device
+              - Internal error: volume not found
+              - Unable to contact device
+              - Cannot revoke certificate for this device
+  /udx/v1/export:
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - activity
+      description: Start an activity to export Lyve Pilot managed data to an unmanaged-data location.
+      operationId: start_export
+      requestBody:
+        description: The export information
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateExport'
+      responses:
+        '200':
+          description: Export operation was started successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CopyAndExportSuccessResult'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+                  data:
+                    $ref: '#/components/schemas/CreateExport'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '408':
+          description: Request timeout error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/RequestTimeoutError'
+        '500':
+          description: >-
+            Internal Server Error. Error cases:
+              - Internal error: cannot access device
+              - Internal error: volume not found
+              - Unable to contact device
+              - Cannot revoke certificate for this device
+  /udx/v1/devices:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - devices
+      description: Return the list of devices managed by Lyve Pilot
+      operationId: list_all_devices
+      responses:
+        '200':
+          description: The device information
+          content:
+            application /json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Devices'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+                  data:
+                    $ref: '#/components/schemas/Devices'
+        default:
+          description: Default Response
+  '/udx/v1/devices/{deviceId}/capacity':
+    summary: Get total device capacity by device Id
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - devices
+      operationId: read_a_device_capacity
+      parameters:
+        - $ref: '#/components/parameters/deviceIdPathParameter'
+      description: >-
+        Returns the device information for the given ID
+        and includes total capacity - including managed and unmanaged volumes
+      responses:
+        '200':
+          description: >-
+            The device information by ID and the total capacity
+            adding managed and unmanaged volumes information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+  '/udx/v1/devices/{deviceId}/attachedDevices':
+    summary: Return the list of attached devices by Device Id
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - devices
+      operationId: list_attached_devices_by_device_id
+      parameters:
+        - $ref: '#/components/parameters/deviceIdPathParameter'
+      description: >-
+        Return the list of devices attached to a Lyve Client portal device
+      responses:
+        '200':
+          description: The device information
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Devices'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+                  data:
+                    $ref: '#/components/schemas/Devices'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - devices
+      description: Register a new attached device to Lyve Pilot that is connected through a Lyve Client
+      operationId: register_attached_device
+      parameters:
+        - $ref: '#/components/parameters/deviceIdPathParameter'
+      requestBody:
+        description: The list of attached device id's to be registered
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                devices:
+                  type: array
+                  example: ['attached-device-id-1', 'attached-device-id-2']
+                  items:
+                    type: string
+      responses:
+        '201':
+          description: Successful attached device registration
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Devices'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+                  data:
+                    $ref: '#/components/schemas/Devices'
+        '404':
+          description: Attached device not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: >-
+            Internal Server Error. Error cases:
+              - Internal error: cannot access device
+              - Unable to contact device
+  '/udx/v1/devices/{deviceId}/attachedDevices/{attachedDeviceId}':
+    summary: Find an attached device given the ID
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - devices
+      operationId: read_an_attached_device
+      parameters:
+        - $ref: '#/components/parameters/deviceIdPathParameter'
+        - $ref: '#/components/parameters/attachedDeviceIdPathParameter'
+      description: >-
+        Returns the device information for the given attached device ID
+      responses:
+        '200':
+          description: >-
+            The device information list of properties and values on it
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+  '/udx/v1/devices/{deviceId}/attachedDevices/{attachedDeviceId}/unregister':
+    delete:
+      security:
+        - bearerAuth: []
+      tags:
+        - devices
+      description: Unregister an attached device from Lyve Pilot
+      operationId: unregister_attached_device
+      parameters:
+        - $ref: '#/components/parameters/deviceIdPathParameter'
+        - $ref: '#/components/parameters/attachedDeviceIdPathParameter'
+      responses:
+        '200':
+          description: The device was unregistered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnregisterDevicesSummary'
+        '500':
+          description: >-
+            Internal Server Error. Error cases:
+              - Internal error: cannot access device
+              - Internal error: cannot delete device
+              - Unable to contact device
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/InternalServerError'
+        '404':
+          description: The device requested cannot be found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+  '/udx/v1/devices/{deviceId}':
+    summary: Find a device given the ID
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - devices
+      operationId: read_a_device
+      description: Returns the device information for the given device ID
+      parameters:
+        - $ref: '#/components/parameters/deviceIdPathParameter'
+      responses:
+        '200':
+          description: >-
+            The device information list of properties and values that were
+            changed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        default:
+          description: The device details
+    patch:
+      security:
+        - bearerAuth: []
+      tags:
+        - devices
+      operationId: update_device
+      parameters:
+        - $ref: '#/components/parameters/deviceIdPathParameter'
+      description: >-
+        Updates a device by its device id and returns the updated device object
+      requestBody:
+        description: The updated device information
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceUpdateRequest'
+      responses:
+        '200':
+          description: >-
+            The device information with the updated information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal Server Error. Unable to update device
+  '/udx/v1/devices/{deviceId}/remoteDevices':
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - devices
+      operationId: list_remote_devices_by_device_id
+      parameters:
+        - $ref: '#/components/parameters/deviceIdPathParameter'
+      description: >-
+        Returns the list of devices that the given Lyve Pilot device recognizes and to which the given device can route
+      responses:
+        '200':
+          description: >-
+            The Device Information
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Devices'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+    post:
+      security:
+          - bearerAuth: []
+      tags:
+        - devices
+      operationId: add_remote_devices_to_device
+      description: >-
+        Devices do not auto-discover one another.  This call prompts the target device to discover the device provided
+      parameters:
+        - $ref: '#/components/parameters/deviceIdPathParameter'
+      requestBody:
+        description: uri of remote device to be added
+        required: true
+        content:
+          application/json:
+            schema:
+              properties:
+                uri:
+                  type: string
+                  example: "https://1.2.3.4:5000"
+      responses:
+        '201':
+          description: Remote Device Discovery Started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Devices'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+                  data:
+                    $ref: '#/components/schemas/Devices'
+        '404':
+          description: Attached device not found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: >-
+            Internal Server Error. Error cases:
+              - Internal error: cannot access device
+              - Unable to contact device
+    delete:
+      security:
+        - bearerAuth: []
+      tags:
+        - devices
+      description: device to forget the provided device
+      operationId: unassign_remote_device
+      parameters:
+        - $ref: '#/components/parameters/deviceIdPathParameter'
+      responses:
+        '200':
+          description: The remote device was unassigned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+  '/udx/v1/devices/{deviceId}/remoteVolumes':
+    summary: Returns the list of volumes that are routable from the target device
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - devices
+      operationId: list_remote_volumes_by_device_id
+      parameters:
+        - $ref: '#/components/parameters/deviceIdPathParameter'
+      description: >-
+        Returns the list of volumes that are routable from the target device. Volumes that 
+        are attached to remote devices are returned in this list
+      responses:
+        '200':
+          description: >-
+            List of Volume Information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Device'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+  /udx/v1/connectDevice:
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - devices
+      operationId: get_volume_connectivity
+      description: Initiate connectivity between two devices that have not automatically discovered one another.
+      requestBody:
+        description: Check connectivity between the source and destination devices before volume copy.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectDevice'
+      responses:
+        '201':
+          description: The Lyve Pilot agents on each device have established communication and discovery has started.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VolumeInfo'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+  '/udx/v1/externalStorage':
+    summary: Linked endpoint collections
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - endpoints
+      operationId: get_external_storage_objects
+      description: Returns the list of linked endpoints
+      responses:
+        '200':
+          description: Get all Pilot Links external storage objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExternalStorageItem'
+        '500':
+          description: >-
+            Internal Server Error. Error cases:
+            - Internal error: Data base error
+    post:
+      security:
+          - bearerAuth: []
+      tags:
+        - endpoints
+      operationId: create_external_storage_object
+      description: Creates a new Linked Endpoint
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewExternalStorage'
+      responses:
+        '201':
+          description: External storage object created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalStorageItem'
+        '500':
+          description: >-
+            Internal Server Error. Error cases:
+            - Internal error: Data base error
+            - Internal error: cannot create data base entry
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+  '/udx/v1/externalStorage/validateEndpoint':
+    summary: Validate between Linked Endpoints and Pilot Links
+    put:
+      security:
+        - bearerAuth: []
+      tags:
+        - endpoints
+      description: Validate that a given Linked Endpoint can connect to and utilize a given Pilot Link
+      requestBody:
+        description: Linked Endpoint URI, and Pilot Link ID. Include credentials if not one-time validation.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidationRequest'
+      responses:
+        '200':
+          description: Endpoint is up and accessible by Pilot Link
+          content:
+            application/json:
+              schema:
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: >-
+            Internal Server Error. Error cases:
+            - Internal error: Data base error
+            - Internal error: cannot access device
+            - Unable to contact device
+  '/udx/v1/externalStorage/{externalStorageId}':
+    summary: Find a Linked Endpoint object by id
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - endpoints
+      operationId: get_external_storage_object_by_id
+      description: Gets an external storage object by id
+      parameters:
+        - $ref: '#/components/parameters/ExternalStorageParameter'
+      responses:
+        '200':
+          description: Returns a list of Linked Endpoint objects
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExternalStorageItem'
+        '500':
+          description: >-
+            Internal Server Error. Error cases:
+            - Internal error: Data base error
+            - Internal error: cannot create data base entry
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+    patch:
+      security:
+        - bearerAuth: []
+      tags:
+        - endpoints
+      operationId: update_external_storage_object_by_id
+      description: Update a single Linked Endpoint object by id
+      parameters:
+        - $ref: '#/components/parameters/ExternalStorageParameter'
+      requestBody:
+        description: The information to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateExternalStorage'
+      responses:
+        '200':
+          description: The updated external storage object information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalStorageItem'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+    delete:
+      security:
+        - bearerAuth: []
+      tags:
+        - endpoints
+      operationId: delete_external_storage_object
+      description: Delete a Linked Endpoint by id
+      parameters:
+        - $ref: '#/components/parameters/ExternalStorageParameter'
+      responses:
+        '204':
+          description: No content
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: >-
+            Internal Server Error. Error cases:
+            - Internal error: Data base error
+            - Internal error: cannot create data base entry
+  '/udx/v1/devices/{deviceId}/assignedStorage':
+    summary: Return Linked Endpoints assigned to a given Pilot Link
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - endpoints
+        - devices
+      operationId: get_external_storage_items_by_device_id
+      parameters:
+        - $ref: '#/components/parameters/deviceIdPathParameter'
+      responses:
+        '200':
+          description: >-
+            Return a list of Linked Endpoint objects
+            assigned to a device
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExternalStorageItem'
+        '500':
+          description: >-
+            Internal Server Error. Error cases:
+            - Internal error: Data base error
+            - Internal error: cannot create data base entry
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+    post:
+      security:
+          - bearerAuth: []
+      tags:
+        - endpoints
+        - devices
+      operationId: create_external_storage_item_by_device_id
+      description: Create a Linked Endpoint and immediately assign it to a given Pilot Link device id
+      parameters:
+        - $ref: '#/components/parameters/deviceIdPathParameter'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewExternalStorage'
+      responses:
+        '201':
+          description: External storage created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalStorageItem'
+        '500':
+          description: >-
+            Internal Server Error. Error cases:
+            - Internal error: Data base error
+            - Internal error: cannot create data base entry
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+  '/udx/v1/devices/{deviceId}/assignedStorage/{externalStorageId}':
+    summary: Assign / Unassign Linked Endpoints to a Pilot Link
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - endpoints
+        - devices
+      operationId: assign_linked_endpoint
+      description: Assign Linked Endpoints to a Pilot Link
+      parameters:
+        - $ref: '#/components/parameters/deviceIdPathParameter'
+        - $ref: '#/components/parameters/ExternalStorageParameter'
+      responses:
+        '200':
+          description: External storage updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalStorageItem'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: >-
+            Internal Server Error. Error cases:
+            - Internal error: Data base error
+            - Internal error: cannot create data base entry
+    delete:
+      security:
+        - bearerAuth: []
+      tags:
+        - endpoints
+        - devices
+      operationId: unassign_linked_endpoint
+      description: Unassign Linked Endpoints from a Pilot Link
+      parameters:
+        - $ref: '#/components/parameters/deviceIdPathParameter'
+        - $ref: '#/components/parameters/ExternalStorageParameter'
+      responses:
+        '204':
+          description: No content
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: >-
+            Internal Server Error. Error cases:
+            - Internal error: Data base error
+            - Internal error: cannot create data base entry
+  '/udx/v1/volumes/{volumeId}/destinationVolumes':
+    summary: Get all managed volumes that are available as copy destinations to the given source volume.
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - volumes
+      operationId: get_remote_udx_volumes
+      description: >-
+        Return all managed volumes that are available as copy destinations to the given source volume, including volumes that are not currently visible to the source.
+      parameters:
+        - $ref: '#/components/parameters/volumeIdParameter'
+      responses:
+        '200':
+          description: >-
+            This returns an array of Lyve Pilot managed Volumes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoteUDXVolumes'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+  '/udx/v1/devices/{deviceId}/unregister':
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - devices
+      description: Unregister device from Lyve Pilot
+      operationId: unregister_device
+      parameters:
+        - $ref: '#/components/parameters/deviceIdPathParameter'
+      responses:
+        '200':
+          description: The device was unregistered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnregisterDevicesSummary'
+        '500':
+          description: >-
+            Internal Server Error. Error cases:
+              - Internal error: cannot access device
+              - Internal error: activity not found
+              - Internal error: cannot update activity
+              - Internal error: volume not found
+              - Internal error: cannot delete volume
+              - Internal error: cannot delete device
+              - Internal error: cannot delete remote volume
+              - Internal error: cannot access feed notification
+              - Unable to contact device
+              - Cannot revoke certificate for this device
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/InternalServerError'
+        '404':
+          description: The device requested cannot be found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+  /udx/v1/metadata:
+    summary: Get UDS Bundle Metadata stored in Lyve Pilot
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - metadata
+      description: Retrieve the list of UDS Bundle Metadata stored in Lyve Pilot
+      operationId: read_udx_metadata
+      responses:
+        '200':
+          description: the list of UDS Bundle Metadata
+          content:
+            application /json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Metadata'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+  '/udx/v1/metadata/{metadataId}':
+    summary: Get UDS Metadata by Query ID stored in Lyve Pilot
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - metadata
+      operationId: read_udx_metadata_by_id
+      description: Returns UDS Metadata by Query ID stored in Lyve Pilot
+      parameters:
+        - $ref: '#/components/parameters/metadataIdPathParameter'
+      responses:
+        '200':
+          description: An array of UDS Metadata by Query ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Metadata'
+  /udx/v1/volumes:
+    summary: Volume Operations
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - volumes
+      description: Retrieve the list of volumes
+      responses:
+        '200':
+          description: the list of volumes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VolumeInfo'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+  '/udx/v1/volumes/{volumeId}':
+    summary: Volume Operations
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - volumes
+      description: Retrieve one volume by ID
+      parameters:
+          - $ref: '#/components/parameters/volumeIdParameter'
+      responses:
+        '200':
+          description: One volume
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/VolumeInfo'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+
+  /udx/v1/volumes/{volumeId}/bundles:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+       - bundles
+       - volumes
+      parameters:
+        - $ref: '#/components/parameters/volumeIdParameter'
+      description: Retrieve the list of bundles on a specified volume
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Bundle'
+        '400':
+          description: >-
+            Bad request error. Error cases:
+              - VolumeId is in invalid format.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: >-
+            No bundles found on the volume.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal Server Error. Unable to retrieve volume information.
+
+  /udx/v1/registerDevice:
+    summary: Device Token Registration
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+        - registration
+      description: Send the device token in for registration
+      operationId: register_device
+      requestBody:
+        description: The device token information
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DeviceRegistrationRequest'
+      responses:
+        '200':
+          description: Registration of device token was successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeviceRegistrationResponse'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+                  data:
+                    $ref: '#/components/schemas/DeviceRegistrationRequest'
+        default:
+          description: The newly created device
+  /udx/v1/endpoints:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+      - endpoints
+      description: Get all unmanaged-data endpoints
+      operationId: getExternalEndpoints
+      responses:
+        '200':
+          description: List of unmanaged-data endpoints
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/ExternalEndpoint'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+    post:
+      security:
+        - bearerAuth: []
+      tags:
+      - endpoints
+      description: Create and save a new unmanaged-data endpoint
+      operationId: createAExternalEndpoint
+      requestBody:
+        description: The external endpoint information
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalEndpoint'
+      responses:
+        '201':
+          description: The new external endpoint
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalEndpoint'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+                  data:
+                    $ref: '#/components/schemas/ExternalEndpoint'
+  /udx/v1/endpoints/endpointTypes:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+      - endpoints
+      description: Get all unmanaged-data endpoint types
+      operationId: getEndpointTypes
+      responses:
+        '200':
+          description: List of all external endpoint types
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        enum:
+                          type: string
+                          example: AMAZON-S3
+                        value:
+                          type: string
+                          example: Amazon S3
+  '/udx/v1/endpoints/{endpointId}':
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - endpoints
+      description: Get information on a single endpoint
+      operationId: getExternalEndpoint
+      parameters:
+        - $ref: '#/components/parameters/endpointParameter'
+      responses:
+        '200':
+          description: External endpoint information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalEndpoint'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+    put:
+      security:
+        - bearerAuth: []
+      tags:
+        - endpoints
+      description: Update information on an existing unmanaged-data endpoint
+      operationId: updateAExternalEndpoint
+      parameters:
+        - $ref: '#/components/parameters/endpointParameter'
+      requestBody:
+        description: The information to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExternalEndpoint'
+      responses:
+        '200':
+          description: The updated endpoint information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalEndpoint'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+    delete:
+      security:
+        - bearerAuth: []
+      tags:
+        - endpoints
+      description: Delete an unmanaged-data endpoint
+      operationId: deleteAExternalEndpoint
+      parameters:
+        - $ref: '#/components/parameters/endpointParameter'
+      responses:
+        '200':
+          description: The updated endpoint information
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ExternalEndpoint'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: Not found error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+  /udx/v1/endpoints/{deviceId}/validateEndpoint/{endpointId}:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - endpoints
+      description: Verify that a given unmanaged-data endpoint can be seen by the given device and be used for data movement
+      parameters:
+        - $ref: '#/components/parameters/deviceIdPathParameter'
+        - $ref: '#/components/parameters/endpointParameter'
+      operationId: verifyEndpoint
+      responses:
+        '200':
+          description: Unmanaged-data Endpoint is up and accessible for data movement
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+  /udx/v1/endpoints/validateEndpoint/{endpointId}:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - endpoints
+      description: Verify that a given unmanaged-data endpoint can be seen and be used for data movement
+      parameters:
+        - $ref: '#/components/parameters/endpointParameter'
+      operationId: verify_endpoint
+      responses:
+        '200':
+          description: Unmanaged-data Endpoint is up and accessible for data movement
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+  /udx/v1/endpoints/validateEndpoint:
+    put:
+      security:
+        - bearerAuth: []
+      tags:
+        - endpoints
+      description: Validate that an unsaved unmanaged-data endpoint can be seen and be used for data movement
+      operationId: validateEndpoint
+      requestBody:
+        description: The information to update
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidateEndpoint'
+      responses:
+        '200':
+          description: Endpoint is up and accessible for data movement
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: true
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+  /udx/v1/feed:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - feed
+      description: Get feed elements
+      operationId: get_feed
+      parameters:
+        - $ref: '#/components/parameters/tagIdsParameter'
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FeedItem'
+        '400':
+          description: Bad request error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+  /udx/v1/logs/collect:
+    post:
+      security:
+        - bearerAuth: []
+      description: Deprecated.  Do not use.
+      operationId: collectLogs
+      responses:
+        '201':
+          description: Successful initiation of log collection
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CollectResponse'
+        '409':
+          description: Conflict error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+  /udx/v1/logs/download:
+    get:
+      security:
+        - bearerAuth: []
+      description: Deprecated.  Do not use.
+      operationId: downloadLogs
+      responses:
+        '200':
+          description: The logs .tgz file
+          content:
+            application/octet-stream:
+              schema:
+                type: string
+                format: binary
+        '409':
+          description: Conflict error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+  /udx/v1/logs/status:
+    get:
+      security:
+        - bearerAuth: []
+      description: Deprecated.  Do not use.
+      operationId: logStatus
+      responses:
+        '200':
+          description: Successful log status query
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LogStatus'
+        '409':
+          description: Conflict error
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  message:
+                    type: string
+  /udx/v1/bundles/{bundleId}/tags:
+    put:
+      security:
+        - bearerAuth: []
+      tags:
+        - bundles
+      description: Add a tag to a bundle
+      parameters:
+        - $ref: '#/components/parameters/bundleIdParameter'
+      requestBody:
+        description: tag value
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                value:
+                  type: string
+                  example: Camera2-Door1
+      responses:
+        '200':
+          description: Tag added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tagId:
+                    type: string
+                  bundleId:
+                    type: string
+        '400':
+          description: The tag was not applied to this bundle. A maximum of 8 tags may be applied to a single bundle, and a tag must have between 1-32 characters to be valid.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: The tag was not applied to this bundle. A maximum of 8 tags may be applied to a single bundle, and a tag must have between 1-32 characters to be valid.
+                  data:
+                    type: object
+                    properties:
+                      value:
+                        type: string
+        '404':
+          description: The bundle id specified does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          example: Not found
+                        message:
+                          type: string
+                          example: The bundle id specified does not exist
+    delete:
+      security:
+        - bearerAuth: []
+      tags:
+        - bundles
+      description: Delete a tag from a bundle
+      parameters:
+        - $ref: '#/components/parameters/bundleIdParameter'
+      responses:
+        '200':
+          description: Tag deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  bundleId:
+                    type: string
+                  tags:
+                    type: array
+                    items:
+                      type: string
+        '404':
+          description: The bundle id specified does not exist
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        name:
+                          type: string
+                          example: Not found
+                        message:
+                          type: string
+                          example: The bundle id specified does not exist
+        '400':
+          description: The tagid specified must be valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: The tagid specified must be valid
+                  data:
+                    type: object
+                    properties:
+                      tagId:
+                        type: string
+  /udx/v1/tags:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - bundles
+      description: List all the tags across all bundles
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TagResponse'
+        '400':
+          description: Error fetching tag list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+  /udx/v1/bundles:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - bundles
+      parameters:
+       - $ref: '#/components/parameters/tagIdsParameter'
+      description: List all the bundles
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Bundle'
+                  meta:
+                    type: object
+                    properties:
+                      count:
+                        type: number
+                      page:
+                        type: number
+                      pagesize:
+                        type: number
+        '400':
+          description: Error fetching bundle list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        message:
+                          type: string
+                          example: The tagid must be valid
+                  data:
+                    type: object
+  /udx/v1/bundles/{bundleId}:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - bundles
+      parameters:
+        - $ref: '#/components/parameters/bundleIdParameter'
+      description: Retrieve a single bundle based off of bundleId
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Bundle'
+        '400':
+          description: >-
+            Bad request error. Error cases:
+              - Bundle is in invalid format.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+        '404':
+          description: >-
+            The bundle id was not found.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/NotFoundError'
+        '500':
+          description: Internal Server Error. Unable to retrieve bundle information.
+
+
+
+  /udx/v1/customerSettings:
+    summary: Customer Settings
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - system
+      description: Retrieve the customer settings. These will be unique to the current customer instance.
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerSettingsResponse'
+        '500':
+          description: Internal Server Error. Unable to retrieve customer settings.
+    patch:
+      security:
+        - bearerAuth: []
+      tags:
+        - system
+      description: Update the customer settings. These will be unique to the current customer instance. Only the fields included in the request will be updated. All other customer settings will be unaffected.
+      requestBody:
+        description: customer settings
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                orchestrationMode:
+                  type: string
+                  example: ENTERPRISE_PERFORMANCE
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CustomerSettingsResponse'
+        '400':
+          description: Bad request sent with an invalid orchestration mode
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                    example: false
+                  errors:
+                    $ref: '#/components/schemas/BadRequestError'
+                  data:
+                    $ref: '#/components/schemas/CustomerSettingsResponse'
+        '500':
+          description: Internal Server Error. Unable to update customer settings
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    CollectResponse:
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+        deviceResponses:
+          type: array
+    LogStatus:
+      properties:
+        status:
+          type: string
+          enum:
+            - 'COLLECTING'
+            - 'DORMANT'
+        lastLogPackage:
+          type: string
+    ExternalEndpoint:
+      description: >-
+        Used to describe a data endpoint to which managed data can be exported. This could be
+        Amazon S3 bucket, SwiftStack S3 bucket, Generic S3 bucket, Cloudian Storage, NFS, or Google Cloud.
+      properties:
+        endpointType:
+          type: string
+          enum:
+           - 'AMAZON-S3'
+           - 'SWIFTSTACK-S3'
+           - 'GENERIC-S3'
+           - 'NFS'
+           - 'CLOUDIAN-STORAGE'
+           - 'GOOGLE-CLOUD'
+           - 'SMB'
+        endpointTypeString:
+          type: string
+        name:
+          type: string
+          minLength: 3
+          maxLength: 32
+        address:
+          type: string
+        s3Credentials:
+          type: object
+          properties:
+            accessKeyId:
+              type: string
+            secretAccessKey:
+              type: string
+        smbCredentials:
+          type: object
+          properties:
+            username:
+              type: string
+            password:
+              type: string
+            domain:
+              type: string
+    workflowConfigurationSchema:
+      description: workflows
+      required:
+        - name
+        - trigger
+        - type
+      properties:
+        name:
+          type: string
+          minLength: 2
+          maxLength: 255
+        trigger:
+          type: string
+          enum:
+            - 'AUTO'
+            - 'SCHEDULED'
+            - 'MANUAL'
+        canBeTriggered:
+          type: boolean
+          example: true
+        customDescription:
+          type: string
+        bookmarked:
+          type: boolean
+          example: false
+        creationDate:
+          type: string
+        createdBy:
+          type: string
+        orchestrationMode:
+          $ref: '#/components/schemas/orchestrationMode'
+        type:
+          type: string
+          enum:
+            - 'IMPORT'
+            - 'COPY'
+            - 'EXPORT'
+        actions:
+          type: array
+          items:
+            $ref: '#/components/schemas/WorkflowAction'
+        sources:
+          type: array
+          items:
+            type: object
+            properties:
+              device:
+                type: string
+              volume:
+                type: array
+                items:
+                  type: string
+        destinations:
+          type: array
+          items:
+            type: object
+            properties:
+              device:
+                type: string
+              volume:
+                type: string
+        filenameFilter:
+          type: array
+          items:
+            type: string
+    WorkflowAction:
+      description: workflow action
+      properties:
+        type:
+          type: string
+          enum:
+            - 'IMPORT'
+            - 'COPY'
+            - 'EXPORT'
+            - 'VERIFY'
+            - 'DELETE-SOURCE'
+            - 'TAG'
+            - 'NAME-BUNDLE'
+        isPrimary:
+          type: boolean
+          example: false
+        tagValues:
+          type: array
+          items:
+            type: string
+        nameBundleValue:
+          type: string
+    FeedItem:
+      description: >-
+        The feed items to be displayed in the Lyve Pilot client message feed.
+      properties:
+        feedType:
+          type: string
+          enum:
+           - 'ACTIVITY'
+           - 'ALERT'
+           - 'DEVICE'
+        timestamp:
+          type: string
+        availableActions:
+          type: array
+          items:
+            type: string
+        commendIds:
+          type: array
+          items:
+            type: string
+        targetDeviceId:
+          type: string
+        activity:
+          type: string
+        alertId:
+          $ref: '#/components/schemas/Alert'
+    BaseError:
+      description: A base error message
+      type: object
+      properties:
+        name:
+          type: string
+          example: Missing param
+        key:
+          type: string
+        message:
+          type: string
+          example: field is required
+    ForbiddenError:
+      description: Forbidden request error
+      type: array
+      items:
+        $ref: '#/components/schemas/BaseError'
+    NotFoundError:
+      description: Not found error
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            example: Not found
+          message:
+            type: string
+            example: Device not found
+    BadRequestError:
+      description: Bad request error
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            example: Missing param
+          key:
+            type: string
+          message:
+            type: string
+            example: field is required
+    UnauthorizedRequestError:
+      description: >-
+        The HTTP 401 Unauthorized client error status response
+        code indicates that the request has not been applied because
+        it lacks valid authentication credentials for the target resource.
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            example: "Unauthorized Request Error"
+          message:
+            type: string
+            example: "401 Unauthorized Request Error"
+    MethodNotAllowedError:
+      description: Method Not Allowed Error
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            example: "Method Not Allowed Error"
+          message:
+            type: string
+            example: "405 Method Not Allowed Error"
+    RequestTimeoutError:
+      description: Request Timeout Error
+      type: array
+      items:
+        type: object
+        properties:
+          name:
+            type: string
+            example: Request Timeout
+          message:
+            type: string
+            example:  Request Timeout Error
+    InternalServerError:
+      description: Internal server error
+      type: object
+      properties:
+        success:
+          type: boolean
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: Internal Server Error
+              message:
+                type: string
+                example:  Internal Server Error
+    ServiceUnavailable:
+      description: Service Unavailable
+      type: object
+      properties:
+        success:
+          type: boolean
+        errors:
+          type: array
+          items:
+            type: object
+            properties:
+              name:
+                type: string
+                example: Service Unavailable
+              message:
+                type: string
+                example:  Service Unavailable
+    Bundle:
+      description: The bundle
+      type: object
+      properties:
+        tags:
+          type: array
+          items:
+            type: string
+        bundleId:
+          type: string
+        lastActivityId:
+          type: string
+        orchestrationMode:
+          $ref: '#/components/schemas/orchestrationMode'
+        instances:
+          type: array
+          items:
+            type: object
+            properties:
+              deviceId:
+                type: string
+              volumeId:
+                type: string
+              activityId:
+                type: string
+              quarantinedItems:
+                type: number
+              quarantinedSize:
+                type: number
+              quarantineInfo:
+                type: object
+              totalItems:
+                type: number
+              totalSize:
+                type: number
+              validatedItems:
+                type: number
+              validatedSize:
+                type: number
+    relatedBundles:
+      type: array
+      items:
+        type: string
+    Activity:
+      description: The activity
+      properties:
+        udsTaskId:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - 'DATA-IMPORT'
+            - 'DATA-COPY'
+            - 'DATA-TRUST'
+            - 'DATA-VERIFY'
+            - 'DATA-EXPORT'
+            - 'DATA-DELETE'
+        description:
+          type: string
+        state:
+          type: string
+          enum:
+            - 'UNKNOWN'
+            - 'PENDING'
+            - 'EXECUTING'
+            - 'FINALIZING'
+            - 'COMPLETE'
+            - 'ABORT'
+            - 'ABORTED'
+            - 'FAILED'
+        udsState:
+          type: string
+          enum:
+            - 'UNKNOWN'
+            - 'PENDING'
+            - 'EXECUTING'
+            - 'COMPLETE'
+            - 'ABORT'
+            - 'ABORTED'
+            - 'FAILED'
+        availableActions:
+          type: string
+          enum:
+            - 'CANCEL'
+        errorId:
+          type: string
+        initiatingUserId:
+          type: string
+        initiatingId:
+          type: string
+        targetId:
+          type: string
+        dataSize:
+          type: number
+        udxDataObjectCount:
+          type: number
+        udxDataObjectId:
+          type: string
+        timestampBegin:
+          type: string
+        timestampEnd:
+          type: string
+        sourceVolumeUuid:
+          type: string
+        sourceDeviceUuid:
+          type: string
+        sourceVolumeName:
+          type: string
+        sourceDeviceName:
+          type: string
+        sourceUri:
+          type: string
+        clientSourceUri:
+          type: string
+        clientDestinationUri:
+          type: string
+        destinationVolumeUuid:
+          type: string
+        destinationDeviceUuid:
+          type: string
+        destinationDeviceName:
+          type: string
+        destinationVolumeName:
+          type: string
+        destinationURI:
+          type: string
+        filter:
+          type: string
+        bundleId:
+          type: string
+        orchestrationMode:
+          $ref: '#/components/schemas/orchestrationMode'
+        transferStatus:
+          type: object
+          properties:
+            itemsTransferred:
+              type: number
+            itemsToBeTransferred:
+              type: number
+            itemsDeleted:
+              type: number
+            itemsToBeDeleted:
+              type: number
+            bytesTransferred:
+              type: number
+            currentTransferRate:
+              type: number
+            averageTransferRate:
+              type: number
+            minTransferRate:
+              type: number
+            maxTransferRate:
+              type: number
+            duration:
+              type: number
+        udsBundleId:
+          type: string
+        udsFilter:
+          type: string
+    TagResponse:
+      description: List all the tags
+      properties:
+        _id:
+          type: string
+        value:
+          type: string
+        lastUsedTime:
+          type: string
+          format: date-time
+        __v:
+          type: number
+          example: 0
+    UserInfo:
+      description: User Information
+      properties:
+        user:
+          type: object
+          properties:
+            enabled:
+              type: boolean
+              example: true
+            deleted:
+              type: boolean
+              example: true
+            isVisible:
+              type: boolean
+              example: true
+            type:
+              type: string
+              example: "SINGLE"
+            role:
+              type: string
+              example: "admin"
+            email:
+              type: string
+              example: "name@email.com"
+            password:
+              type: string
+            language:
+              type: string
+              enum:
+                - EN
+                - DE
+                - FR
+                - IT
+                - JA
+                - KO
+                - ZH
+                - PT
+                - RU
+                - ES
+            timezone:
+              type: string
+            locale:
+              type: string
+            name:
+              type: string
+            phone:
+              type: string
+            location:
+              type: string
+            createdBy:
+              type: string
+            twoFactorAuthEnabled:
+              type: boolean
+              example: false
+            createTimestamp:
+              type: string
+              format: date-time
+            lastLoginTimestamp:
+              type: string
+              format: date-time
+            lastPasswordResetTimestamp:
+              type: string
+              format: date-time
+            activities:
+              type: array
+              items:
+                type: string
+            salt:
+              type: string
+              example: "$2b$10$cJ7HhyeiCRePBOxLm3YC6O"
+            OTC:
+              type: number
+              example: 123456
+            _id:
+              type: string
+            __v:
+              type: number
+              example: 0
+    UserUpdate:
+      description: User Update
+      properties:
+        email:
+          type: string
+          example: "name@email.com"
+        role:
+          type: string
+          enum:
+            - admin
+            - standard
+        language:
+          type: string
+          enum:
+            - EN
+        location:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+    UserActionConfirmation:
+      description: User operation was success
+      properties:
+        success:
+          type: boolean
+          example: true
+    ValidateOTC:
+      description: Validate the One Time Code
+      properties:
+        success:
+          type: boolean
+          example: true
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+        EULAAccepted:
+          type: boolean
+          example: false
+        userName:
+          type: string
+          example: "John Doe"
+        userPhone:
+          type: string
+          example: "333-444-5555"
+        userLocation:
+          type: string
+          example: "Denver, CO"
+    ValidationRequest:
+      description: External Storage URI and Device ID
+      properties:
+        uri:
+          type: string
+          example: 's3://my-bucket-url'
+        device:
+          type: string
+          example: '5a1823de-622a-3840-b528-835030f3bc71'
+    ResetPassword:
+      description: Reset password payload
+      properties:
+        success:
+          type: boolean
+          example: true
+        OTC:
+          type: number
+          example: 132456
+    SetPassword:
+      description: Reset password payload
+      properties:
+        password:
+          type: string
+          example: "MyNewPassowrd"
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+    ValidateOTCRequest:
+      description: Reset password payload
+      properties:
+        email:
+          type: string
+          example: "name@email.com"
+        OTC:
+          type: number
+          example: 123456
+    ValidateEndpoint:
+      description: Request body for validating an endpoint that isn't saved
+      required:
+        - uri
+      properties:
+        uri:
+          type: string
+          example: "s3://my-bucket-url"
+        accessKeyId:
+          type: string
+          example: "myAccessKey"
+        secretAccessKey:
+          type: string
+          example: "mySecretAccessKey"
+        deviceId:
+          type: string
+          example: "my-deviceId"
+    UserRole:
+      description: User Role name and Permissions
+      required:
+        - name
+        - permissions
+      properties:
+        name:
+          type: string
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRolePermissions'
+    LoginUser:
+      description: >-
+        Information needed to login the user
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+    LoginResponse:
+      description: >-
+        Tokens returned from a successful login
+      properties:
+        token:
+          type: string
+        refreshToken:
+          type: string
+    RegisterUser:
+      description: >-
+        Information needed to register a new user
+      required:
+        - email
+        - role
+      properties:
+        email:
+          type: string
+          example: "name@email.com"
+        role:
+          type: string
+          enum:
+            - admin
+            - standard
+        language:
+          type: string
+          enum:
+            - EN
+        location:
+          type: string
+        name:
+          type: string
+        phone:
+          type: string
+    EULAResponse:
+      properties:
+        success:
+          type: boolean
+          example: false
+        EULAComplete:
+          type: boolean
+          example: false
+        message:
+          type: string
+          example: "You must agree to Seagate's Terms and Conditions and Privacy Policy"
+    EULASuccessResponse:
+      properties:
+        success:
+          type: boolean
+          example: true
+        EULAComplete:
+          type: boolean
+          example: true
+        EULACompleteTimestamp:
+          type: string
+          format: date-time
+          example: "2020-07-02T03:57:35.724Z"
+    FirstUserComplete:
+      properties:
+        success:
+          type: boolean
+          example: true
+        firstUser:
+          type: boolean
+    FirstUserPending:
+      properties:
+        success:
+          type: boolean
+        firstUser:
+          type: boolean
+    FirstUserPayload:
+      properties:
+        email:
+          type: string
+          example: "admin@seagate.com"
+        password:
+          type: string
+          example: "!admin"
+        name:
+          type: string
+          example: "John Doe"
+        phone:
+          type: string
+          example: "333-444-5555"
+        acceptedSeagateTermsAndConditionsAndPrivacyPolicy:
+          type: boolean
+          example: true
+    SaasFirstUserPayload:
+      properties:
+        email:
+          type: string
+          example: "admin@seagate.com"
+    acceptEULAByUserPayload:
+      properties:
+        OTC:
+          type: number
+          example: 132456
+        email:
+          type: string
+          example: "admin@seagate.com"
+        acceptedSeagateTermsAndConditionsAndPrivacyPolicy:
+          type: boolean
+          example: true
+
+    setSaasPasswordPayload:
+      required:
+        - token
+        - password
+        - name
+      properties:
+        token:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+        password:
+          type: string
+          example: "!admin"
+        name:
+          type: string
+          example: "John Doe"
+        phone:
+          type: string
+          example: "333-444-5555"
+        location:
+          type: string
+          example: "Denver, CO"
+    PostQR:
+      description: >-
+        Information needed to get the QR code
+      properties:
+        email:
+          type: string
+        token:
+          type: string
+    RefreshToken:
+      description: >-
+        Information to renew the token
+      properties:
+        refreshToken:
+          type: string
+    Token:
+      description: >-
+        A token for authentication
+      properties:
+        token:
+          type: string
+    ChangeTwofactorauth:
+      description: >-
+        Information needed to change the twofactor authentication
+      properties:
+        email:
+          type: string
+        enabled:
+          type: boolean
+    VerifyToken:
+      description: >-
+        Information needed to verify the token
+      properties:
+        token:
+          type: string
+        email:
+          type: string
+    UpdateUserRole:
+      description: User Role name and Permissions to be updated
+      properties:
+        name:
+          type: string
+        permissions:
+          type: array
+          items:
+            $ref: '#/components/schemas/UserRolePermissions'
+    UserRolePermissions:
+      description: User role permissions
+      type: string
+      enum:
+        - CreateRoles
+        - ReadRoles
+        - DeleteRoles
+        - AddPermissions
+        - CreateUsers
+        - EditUsers
+        - ReadUsers
+        - DeleteUsers
+        - RegisterDevice
+        - ImportData
+        - CopyData
+        - ExportData
+        - AbortOperation
+        - PauseOperation
+        - ReadActivities
+        - ReadDevices
+        - ReadVolumes
+        - ReadFeed
+        - ReadBundles
+    Devices:
+      description: The list of devices registered in the Lyve Pilot domain
+      required:
+        - _id
+        - deviceName
+      type: array
+      items:
+        $ref: '#/components/schemas/Device'
+    Device:
+      description: >-
+        The device information for a device managed by Lyve Pilot. The device object contains all
+        device information and can be used in a PUT operation to update
+        information about the device.
+      allOf:
+        - $ref: '#/components/schemas/NewDevice'
+        - required:
+          - _id
+          properties:
+            link:
+              description: The URL for the device resource
+              type: string
+              format: url
+              readOnly: true
+            id:
+              description: >-
+                The ID is assigned by the system when a device has been
+                registered
+              type: string
+              readOnly: true
+            createDate:
+              type: string
+              format: date-time
+              readOnly: true
+            capacity:
+              $ref: '#/components/schemas/DeviceCapacity'
+            destinationBucket:
+              $ref: '#/components/schemas/S3Endpoint'
+            connectedDevices:
+              $ref: '#/components/schemas/ConnectedDevices'
+            deviceCertificate:
+              $ref: '#/components/schemas/DeviceCertificate'
+            lastActivityId:
+              $ref: '#/components/schemas/Activity'
+    NewDevice:
+      description: >-
+        This component is used for device registration and contains all of the
+        informationwhen a device is added.
+      required:
+        - _id
+        - deviceName
+      properties:
+        deviceName:
+          description: The user assigned name for the device.
+          type: string
+          minLength: 2
+          maxLength: 255
+        register:
+          description: Indicate if the device should be registered in the Lyve Pilot domain
+          type: boolean
+          default: false
+        serialnumber:
+          description: The serial number for this device for asset tracking.
+          type: string
+          pattern: '^[A-Za-z0-9_-]+$'
+          minLength: 2
+          maxLength: 255
+        deviceType:
+          description: >-
+            The Lyve Pilot device type. This list will be expanded as new devices are
+            added. This should correspond to the actual device type name the
+            customer will be familiar with.
+          type: string
+          enum:
+            - pathfinder
+            - ees
+            - ecs
+            - lyve-client
+            - mobile-array
+            - mobilePhone
+            - genericSSD
+            - genericHDD
+            - cloud-container
+        model:
+          description: The model name of the device according to device configuration.
+          type: string
+          minLength: 2
+          maxLength: 255
+        firmwareRevision:
+          description: The firmware revision currently installed on the device.
+          type: string
+          minLength: 2
+          maxLength: 255
+          pattern: '^[A-Za-z0-9._-]+$'
+        udsVersion:
+          description: >-
+            The firmware revision of the UDX Devices Services module installed
+            on the device.
+          type: string
+          pattern: '^\d{3}.\d{3}.\d{3}$'
+          minLength: 2
+          maxLength: 255
+        macAddress:
+          type: string
+          minLength: 12
+          maxLength: 17
+          pattern: '^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$'
+        ipAddress:
+          type: string
+          oneOf:
+            - format: ipv4
+            - format: ipv6
+        healthState:
+          type: string
+          enum:
+            - OK
+            - Degraded
+            - Fault
+            - Disconnected
+    UnregisterDevicesSummary:
+      properties:
+        device:
+          type: object
+          properties:
+            deviceName:
+              type: string
+            uuid:
+              type: string
+            deviceType:
+              type: string
+            model:
+              type: string
+            device_name:
+              type: string
+            status:
+              type: string
+        UDSResponse:
+          type: object
+          properties:
+            location:
+              type: string
+        volumes:
+          type: object
+          properties:
+            n:
+              type: number
+            ok:
+              type: number
+            deletedCount:
+              type: number
+        remoteVolumes:
+          type: object
+          properties:
+            n:
+              type: number
+            ok:
+              type: number
+            deletedCount:
+              type: number
+        activities:
+          type: object
+          properties:
+            n:
+              type: number
+            ok:
+              type: number
+            nModified:
+              type: number
+        feedItems:
+          type: object
+          properties:
+            n:
+              type: number
+            ok:
+              type: number
+            nModified:
+              type: number
+        success:
+          type: boolean
+    NewExternalStorage:
+      properties:
+        managed:
+          type: boolean
+          example: true
+        name:
+          type: string
+          minLength: 3
+          maxLength: 32
+          example: 'My external storage endpoint'
+        uri:
+          type: string
+          example: 'https://127.0.0.1/my-s3-bucket'
+        type:
+          type: string
+          enum:
+            - 'S3'
+            - 'NFS'
+            - 'SMB'
+            - 's3'
+            - 'nfs'
+            - 'smb'
+          example: 's3'
+        device:
+          type: string
+          example: '5a1823de-622a-3840-b528-835030f3bc71'
+        credentials:
+          type: object
+          properties:
+            accessKey:
+              type: string
+              example: 'accessKey1'
+            secretKey:
+              type: string
+              example: 'verySecretKey1'
+            username:
+              type: string
+              example: 'username'
+            password:
+              type: string
+              example: 'password'
+            domain:
+              type: string
+              example: 'domain'
+    ExternalStorageItem:
+      properties:
+        _id:
+          type: string
+          example: 60dd62f11d9b104356444d9d
+        managed:
+          type: boolean
+          example: true
+        name:
+          type: string
+          minLength: 3
+          maxLength: 32
+          example: 'My external storage endpoint'
+        uri:
+          type: string
+          example: 'https://127.0.0.1/my-s3-bucket'
+        type:
+          type: string
+          enum:
+           - 'S3'
+           - 'NFS'
+           - 'SMB'
+           - 's3'
+           - 'nfs'
+           - 'smb'
+          example: 's3'
+        device:
+          type: string
+          example: '5a1823de-622a-3840-b528-835030f3bc71'
+        volume:
+          type: string
+          example: '9eaa0739-f8bc-442e-9512-c287129ab437'
+    UpdateExternalStorage:
+      properties:
+        name:
+          type: string
+          minLength: 3
+          maxLength: 32
+          example: 'My external storage endpoint'
+        device:
+          type: string
+          example: '5a1823de-622a-3840-b528-835030f3bc71'
+        credentials:
+          type: object
+          properties:
+            accessKey:
+              type: string
+              example: 'accessKey1'
+            secretKey:
+              type: string
+              example: 'verySecretKey1'
+            username:
+              type: string
+              example: 'username'
+            password:
+              type: string
+              example: 'password'
+    AssignExternalStorage:
+      description: >-
+        Used to describe an extern
+      properties:
+        externalStorageId:
+          type: string
+    Alert:
+      required:
+        - healthConditionId
+        - severity
+        - alertIdentifier
+      properties:
+        healthConditionId:
+          type: number
+        severity:
+          type: string
+          enum:
+            - Critical
+            - Warning
+            - Informational
+        alertIdentifier:
+          type: string
+        deviceId:
+          type: string
+        activityId:
+           type: object
+        acknowledged:
+            type: boolean
+        acknowledgedTimestamp:
+          type: string
+          format: date-time
+        acknowledgedUserId:
+          type: object
+        additionalInfo:
+          type: object
+        resolved:
+          type: boolean
+        resolvedTimestamp:
+          type: string
+          format: date-time
+        alertMessage:
+          type: string
+        alertDetails:
+          type: string
+        recommendedActions:
+          type: string
+    Metadata:
+      description: >-
+        Representation of UDS Metadata information stored
+        in Lyve Pilot
+      properties:
+        certificate:
+          type: string
+        dynamic:
+          $ref: '#/components/schemas/MetadataDynamicObject'
+        hash:
+          type: string
+        prevHash:
+          type: string
+        signature:
+          type: string
+        static:
+          $ref: '#/components/schemas/MetadataStaticObject'
+        timestamp:
+          type: string
+        sessionId:
+          type: string
+        orchestrationMode:
+          $ref: '#/components/schemas/orchestrationMode'
+        ver:
+          type: string
+    MetadataStaticObject:
+      description: >-
+        Metadata static object for Metadata model.
+      properties:
+        created:
+          type: string
+        file:
+          $ref: '#/components/schemas/MetadataFileObject'
+        fingerprint:
+          $ref: '#/components/schemas/MetadataFingerprintObject'
+        name:
+          type: string
+        sessionId:
+          type: string
+    MetadataDynamicObject:
+      description: >-
+        Metadata dynamic object for Metadata model.
+      properties:
+        task:
+          $ref: '#/components/schemas/MetadataTaskObject'
+    MetadataFingerprintObject:
+      description: >-
+        Metadata Fingerprint object for Metadata model.
+      properties:
+        algorithm:
+          type: string
+        blocksize:
+          type: number
+        hashes:
+          type: array
+          items:
+            type: string
+    MetadataFileObject:
+      description: >-
+        Metadata File object for Metadata model.
+      properties:
+        date:
+          type: string
+        dev:
+          type: number
+        gid:
+          type: number
+        mode:
+          type: number
+        name:
+          type: string
+        size:
+          type: number
+        uid:
+          type: number
+    MetadataTaskObject:
+      description: >-
+        Metadata Task object for Metadata model.
+      properties:
+        taskId:
+          type: string
+        sourceDevInfo:
+          $ref: '#/components/schemas/MetadataDeviceInfoObject'
+        destDevInfo:
+          $ref: '#/components/schemas/MetadataDeviceInfoObject'
+        quarantine:
+          type: boolean
+        quarantineReason:
+          type: string
+        type:
+          type: string
+    MetadataDeviceInfoObject:
+      description: >-
+        Metadata DeviceInfo object for Metadata model.
+      properties:
+        productId:
+          type: string
+        uuid:
+          type: string
+        vendorId:
+          type: string
+    BundleFile:
+      description: >-
+        Bundle File object for Bundle model.
+      properties:
+        bundleId:
+          type: string
+        volumeId:
+          type: string
+        activityId:
+          type: string
+        index:
+          type: number
+        name:
+          type: string
+        size:
+          type: number
+        created:
+          type: string
+          format: date-time
+          readOnly: true
+        modified:
+          type: string
+          format: date-time
+          readOnly: true
+        quarantine:
+          type: boolean
+        orchestrationMode:
+          $ref: '#/components/schemas/orchestrationMode'
+        quarantineReason:
+          type: string
+    DeviceCapacity:
+      properties:
+        deviceId:
+          type: string
+    S3Endpoint:
+      properties:
+        url:
+          type: string
+    ConnectedDevices:
+      properties:
+        deviceId:
+          type: string
+    DeviceCertificate:
+      properties:
+        deviceId:
+          type: string
+    VolumeInfo:
+      required:
+      - _id
+      - category
+      - name
+      - uri
+      type: object
+      properties:
+        volumeId:
+          type: string
+          description: volumeId to identify the volume
+        category:
+          type: string
+          description: The category of volume
+          enum:
+          - UDX
+          - NON-UDX
+          - REMOTE-UDX
+        name:
+          type: string
+          description: The name of the volume
+        uri:
+          type: string
+          description: The URI used to access the volume
+        lastActivityId:
+          $ref: '#/components/schemas/Activity'
+      x-body-name: volume_info
+    ExternalStorageVolume:
+      properties:
+        volumeId:
+          type: string
+          description: volumeId to identify the volume
+        category:
+          type: string
+          description: The category of volume
+          enum:
+          - UDX
+          - NON-UDX
+        name:
+          type: string
+          description: The name of the volume
+        uri:
+          type: string
+          description: The URI used to access the volume
+        state:
+          type: string
+          example: 'ONLINE'
+    DRDRequest:
+      properties:
+        status:
+          type: number
+        data:
+          type: object
+        uri:
+          type: string
+    DRDStatus:
+      properties:
+        status:
+          type: number
+        remoteDevices:
+          type: array
+          items:
+            type: string
+    SummarySourceInfo:
+      properties:
+        volume:
+          $ref: '#/components/schemas/VolumeInfo'
+        device:
+          $ref: '#/components/schemas/NewDevice'
+        DRDRequest:
+          $ref: '#/components/schemas/DRDRequest'
+        DRDStatus:
+          $ref: '#/components/schemas/DRDStatus'
+    SummaryDestinationInfo:
+      properties:
+        device:
+          $ref: '#/components/schemas/NewDevice'
+        DRDRequest:
+          $ref: '#/components/schemas/DRDRequest'
+        DRDStatus:
+          $ref: '#/components/schemas/DRDStatus'
+    CopyAndExportSuccessResult:
+      properties:
+        summary:
+          type: object
+          properties:
+            source:
+              $ref: '#/components/schemas/SummarySourceInfo'
+            destination:
+              $ref: '#/components/schemas/SummaryDestinationInfo'
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/UDSTask'
+    UDSTask:
+      example:
+        filter: filter
+        destinationUri: destinationUri
+        sourceUri: sourceUri
+        deduplicate: true
+        state: UNKNOWN
+        sessionId: sessionId
+        category: INGEST
+        userId: userId
+        taskId: taskId
+        activityId: activityId
+      properties:
+        taskId:
+          description: taskId to identify the task
+          type: string
+        category:
+          description: The category of the task
+          enum:
+          - INGEST
+          - MOVE
+          - COPY
+          - EXPORT
+          - DELETE
+          - CHECK
+          - TRUST
+          - REMOTE_XFER
+          type: string
+        state:
+          description: The state of the task
+          enum:
+          - UNKNOWN
+          - PENDING
+          - EXECUTING
+          - COMPLETE
+          - ABORT
+          - FAILED
+          - RESUME
+          type: string
+        filter:
+          description: The filter applied to the source URI contents. For COPY, EXPORT,
+            DELETE, CHECK and TRUST the sessionId of the ingest session to copy, export
+            or delete should be supplied. For INGEST the the filter takes the form
+            of a file pattern filter e.g. *.jpg to ingest all jpeg files. If no filter
+            is supplied for ingest it defaults to *
+          type: string
+        sourceUri:
+          description: The URI to INGEST, COPY or EXPORT from. For DELETE this is
+            the URI to delete the session from
+          type: string
+        destinationUri:
+          description: The URI to INGEST, COPY or EXPORT to. Not used for DELETE only
+            the source URI is applicable
+          type: string
+        sessionId:
+          description: The sessionId associated with the task (applies to INGEST only
+            maps to bundleId)
+          type: string
+        userId:
+          description: The ID of the user that created the task
+          type: string
+        orchestrationMode:
+          $ref: '#/components/schemas/orchestrationMode'
+        deduplicate:
+          description: Currently only supported for INGEST where the source and destination
+            DAS volume in the same. If the flag is set to true, or is not present
+            in the message, the ingested data will be removed from the source  location
+            on completion of a successful ingest
+          type: boolean
+        activityId:
+          description: Id of the Activity object created by creating the task
+          type: string
+      required:
+      - category
+      - sourceUri
+      - state
+      - taskId
+      type: object
+    RemoteUDXVolume:
+      required:
+      - deviceId
+      - volumeId
+      type: object
+      properties:
+        deviceId:
+          type: string
+          description: volumeId to identify the device
+        volumeId:
+          type: string
+          description: volumeId to identify the volume
+    RemoteUDXVolumes:
+      type: array
+      items:
+        $ref: '#/components/schemas/RemoteUDXVolume'
+    DeviceUpdateRequest:
+      required:
+      - displayName
+      type: object
+      properties:
+        displayName:
+          type: string
+          description: The new display Name for the device
+    DeviceRegistrationRequest:
+      type: object
+      properties:
+        deviceToken:
+          type: string
+          description: the token generated by the device to be used for registration
+          pattern: '^[A-Za-z0-9_-]+$'
+          minLength: 6
+          maxLength: 255
+        deviceName:
+          type: string
+          description: An optional name given to the device throught the UI or API to be used for identification
+    DeviceRegistrationResponse:
+      type: object
+      properties:
+        pinRequired:
+          type: boolean
+          description: Indicates if a PIN is required for registration
+        pin:
+          type: string
+          description: The device PIN if the pinRequired property is true
+        registrationExpiration:
+          type: number
+          description: The time at which the Registration request will expire. This is also the same time the pin would expire
+        url:
+          type: string
+          description: The URL that needs to be entered into the device to connect to device to the portal
+    CustomerSettingsResponse:
+      type: object
+      properties:
+        orchestrationMode:
+          $ref: '#/components/schemas/orchestrationMode'
+    CreateImport:
+      type: object
+      required:
+        - sourceUri
+        - deviceId
+        - filter
+        - destinationUri
+      properties:
+        sourceUri:
+          description: The URI of the volume to be imported
+          type: string
+          example: My.Source.Volume
+        destinationUri:
+          description: The URI of the volume the imported data will be copied to
+          type: string
+          example: My.Destination.Volume
+        filter:
+          description: The file pattern filter
+          type: string
+          example: \*.jpg
+        deviceId:
+          description: The device UUID which will import the data
+          type: string
+          example: My.Destination.Device
+        orchestrationMode:
+          $ref: '#/components/schemas/orchestrationMode'
+        externalEndpoint:
+          type: object
+          description: If importing from external endpoint, external endpoint info is sent in this object
+          properties:
+            savedEndpointId:
+              type: string
+              description: If type is saved, this is the id of the saved endpoint to import from.
+            oneTimeS3Endpoint:
+              type: object
+              description: Endpoint information if type is new
+              properties:
+                accessKeyId:
+                  type: string
+                secretAccessKey:
+                  type: string
+        verify:
+          description: Automatically perform a verify operation post-import to ensure all data was written successfully. This can add a significant amount of time to the import.
+          type: boolean
+          example: true
+    CreateCopy:
+      type: object
+      required:
+        - sourceUri
+        - deviceId
+        - destinationUri
+      properties:
+        sourceUri:
+          description: The URI of the source volume for the copy
+          type: string
+          example: My.Source.Volume
+        deviceId:
+          description: The UUID of the device that will copy the data
+          type: string
+          example: My.Destination.Device
+        destinationUri:
+          description: The URI of the destination volume for the copy
+          type: string
+          example: My.Destination.Volume
+        activityId:
+          description: The ID of the activity that will be copied
+          type: string
+          example: ActivityID
+        orchestrationMode:
+          $ref: '#/components/schemas/orchestrationMode'
+        verify:
+          description: Automatically perform a verify operation post-copy to ensure all data was written successfully. This can add a significant amount of time to the copy.
+          type: boolean
+          example: true
+    CreateExport:
+      type: object
+      required:
+        - sourceUri
+        - deviceId
+        - destinationUri
+      properties:
+        sourceUri:
+          description: The URI of the volume where the data resides that will be exported
+          type: string
+          example: My.Source.Volume
+        deviceId:
+          description: The device UUID which will export the data
+          type: string
+          example: My.Destination.Device
+        destinationUri:
+          description: The URI of the external volume, the NFS URI, or the S3 bucket URL where the data will be exported to
+          type: string
+          example: My.Destination.Volume
+        activityId:
+          description: The ID of the activity that will be exported
+          type: string
+          example: ActivityID
+        orchestrationMode:
+          $ref: '#/components/schemas/orchestrationMode'
+        externalEndpoint:
+          type: object
+          description: If exporting to external endpoint, external endpoint info is sent in this object
+          properties:
+            savedEndpointId:
+              type: string
+              description: If type is saved, this is the id of the saved endpoint to export to.
+            oneTimeS3Endpoint:
+              type: object
+              description: Endpoint information if type is new
+              properties:
+                accessKeyId:
+                  type: string
+                secretAccessKey:
+                  type: string
+            nfsUri:
+              type: boolean
+        verify:
+          description: Automatically perform a verify operation post-export to ensure all data was written successfully. This can add a significant amount of time to the export.
+          type: boolean
+          example: true
+    ConnectDevice:
+      type: object
+      required:
+        - sourceDeviceId
+        - connectToDeviceId
+      properties:
+        sourceDeviceId :
+          description: The deviceId of the source volume.
+          type: string
+          example: My.Source.Device
+        connectToDeviceId :
+          description: The deviceId of the destination volume.
+          type: string
+          example: My.Destination.Device
+    orchestrationMode:
+      type: string
+      enum:
+        - ENTERPRISE_SECURITY
+        - STANDARD_SECURITY
+        - ENTERPRISE_PERFORMANCE
+  parameters:
+    udsTaskIdFilterParameter:
+      in: query
+      name: udsTaskId
+      schema:
+        type: string
+      description: Filter by the internal reference id that a device associates with a specific activity
+    nameFilterParameter:
+      in: query
+      name: name
+      schema:
+        type: string
+      description: Filter by activity name
+    typeFilterParameter:
+      in: query
+      name: type
+      schema:
+        type: string
+        enum:
+           - 'DATA-IMPORT'
+           - 'DATA-COPY'
+           - 'DEVICE-CLEAR'
+           - 'DATA-EXPORT'
+           - 'DATA-DELETE'
+      description: Filter by UDS task type
+    stateFilterParameter:
+      in: query
+      name: state
+      schema:
+        type: string
+        enum:
+           - 'UNKNOWN'
+           - 'PENDING'
+           - 'EXECUTING'
+           - 'COMPLETE'
+           - 'ABORTED'
+           - 'FAILED'
+      description: Filter by activity state
+    dataSizeFilterParameter:
+      in: query
+      name: udxDataObjectCount
+      schema:
+        type: number
+      description: Filter by Data Object Count
+    udxDataObjectCountFilterParameter:
+      in: query
+      name: dataSize
+      schema:
+        type: number
+      description: Filter by data size
+    timestampBeginFilterParameter:
+      in: query
+      name: timestampBegin
+      schema:
+        type: string
+        format: date-time
+      description: Filter by activity beginning timestamp
+    timestampEndFilterParameter:
+      in: query
+      name: timestampEnd
+      schema:
+        type: string
+        format: date-time
+      description: Filter by activity ending timestamp
+    lastSyncTimeFilterParameter:
+      in: query
+      name: lastSyncTime
+      schema:
+        type: string
+        format: date-time
+      description: Filter by last sync time
+    sourceVolumeUuidFilterParameter:
+      in: query
+      name: sourceVolumeUuid
+      schema:
+        type: string
+      description: Filter by source volume uuid
+    sourceDeviceUuidFilterParameter:
+      in: query
+      name: sourceDeviceUuid
+      schema:
+        type: string
+      description: Filter by source device uuid
+    sourceVolumeNameFilterParameter:
+      in: query
+      name: sourceVolumeName
+      schema:
+        type: string
+      description: Filter by source volume name
+    sourceDeviceNameFilterParameter:
+      in: query
+      name: sourceDeviceName
+      schema:
+        type: string
+      description: Filter by source device name
+    sourceUriFilterParameter:
+      in: query
+      name: sourceUri
+      schema:
+        type: string
+      description: Filter by source uri
+    destinationVolumeUuidFilterParameter:
+      in: query
+      name: destinationVolumeUuid
+      schema:
+        type: string
+      description: Filter by destination volume uuid
+    destinationDeviceUuidFilterParameter:
+      in: query
+      name: destinationDeviceUuid
+      schema:
+        type: string
+      description: Filter by destination device uuid
+    destinationVolumeNameFilterParameter:
+      in: query
+      name: destinationVolumeName
+      schema:
+        type: string
+      description: Filter by destination volume name
+    destinationDeviceNameFilterParameter:
+      in: query
+      name: destinationDeviceName
+      schema:
+        type: string
+      description: Filter by destination device name
+    destinationUriFilterParameter:
+      in: query
+      name: destinationUri
+      schema:
+        type: string
+      description: Filter by destination uri
+    deletedFilterParameter:
+      in: query
+      name: deleted
+      schema:
+        type: boolean
+      description: Filter by deleted flag
+    quarantineFilterParameter:
+      in: query
+      name: quarantine
+      schema:
+        type: boolean
+      description: Filter by quarantine flag
+    activityIdParameter:
+      name: activityId
+      in: path
+      description: The desired activity ID
+      schema:
+        type: string
+      required: true
+    userIdParameter:
+      name: userId
+      in: path
+      description: The desired User ID
+      schema:
+        type: string
+      required: true
+    deviceIdPathParameter:
+      name: deviceId
+      in: path
+      description: The desired device ID
+      schema:
+        type: string
+      required: true
+    attachedDeviceIdPathParameter:
+      name: attachedDeviceId
+      in: path
+      description: The desired attached device ID
+      schema:
+        type: string
+      required: true
+    metadataIdPathParameter:
+      name: metadataId
+      in: path
+      description: the desired metadata ID
+      schema:
+        type: string
+      required: true
+    userRoleIdParameter:
+      name: userRoleId
+      in: path
+      description: The desired User Role ID
+      schema:
+        type: string
+      required: true
+    endpointParameter:
+      name: endpointId
+      in: path
+      description: the desired endpoint ID
+      schema:
+        type: string
+      required: true
+    ExternalStorageParameter:
+      name: externalStorageId
+      in: path
+      description: The desired external storage ID
+      schema:
+        type: string
+      required: true
+    bundleIdParameter:
+      name: bundleId
+      in: path
+      description: the desired bundle ID
+      schema:
+        type: string
+      required: true
+    volumeIdParameter:
+      name: volumeId
+      in: path
+      description: the desired volume ID
+      schema:
+        type: string
+      required: true
+    tagIdsParameter:
+      name: tagIds
+      in: query
+      description: list of tagIds separated by ','
+      schema:
+        type: string
+      required: false
+    workflowParameter:
+      name: workflowId
+      in: path
+      description: the desired workflow ID
+      schema:
+        type: string
+      required: true
+
