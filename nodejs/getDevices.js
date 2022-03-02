@@ -86,7 +86,7 @@ async function importData(jwt, sourceUri, destUri, destDeviceId, filterStr='*') 
     'destinationUri': destUri,
     'filter': filterStr,
     'deviceId': destDeviceId,
-    'orchestrationMode': 'STANDARD_SECURITY'
+    'orchestrationMode': 'ENTERPRISE_PERFORMANCE'
   };
 
   return await postHelper(jwt, '/udx/v1/import', reqData );
