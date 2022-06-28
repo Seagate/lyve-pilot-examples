@@ -22,15 +22,15 @@ const axios = require('axios');
 const { exit } = require('process');
 
 const args = process.argv.slice(2);
-const uuid = args[0];
-const email = args[1];
-const password = args[2];
+const uuid = '156b9cujydh6dq9s44dubnsg7r'; //args[0];
+const email = 'adam.j.poppenhagen@seagate.com'; //args[1];
+const password = 'Hsft6167#@!'; //args[2];
 
 const data = JSON.stringify({
   "email": email,
   "password": password
 });
-const base_url = 'https://api.lyve.seagate.com/' + uuid;
+const base_url = 'https://api-staging.lyve.seagate.com/' + uuid;
 
 let token = null;
 
