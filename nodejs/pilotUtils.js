@@ -181,7 +181,7 @@ async function first_password_set(token, url, password) {
   const post_data = {
     'token': token,
     'password': password,
-    'name': 'New Guy',
+    'name': 'New User',
     'phone': '123-456-7890',
     'location': 'Longmont, CO'
   }
@@ -321,7 +321,7 @@ async function start() {
       let created_user = await new_user(jwt, NEW_USER_URL, new_user_data);
       console.log('New User OTC: ' + created_user.user.OTC);
 
-      let accept_EULA_token = await accept_EULA(created_user.user.OTC, ACCEPT_EULA_URL, 'dylan.sain@seagate.com');
+      let accept_EULA_token = await accept_EULA(created_user.user.OTC, ACCEPT_EULA_URL, 'email@organization.com');
       console.log('EULA Token: ' + accept_EULA_token);
 
       let new_user_jwt = await first_password_set(accept_EULA_token, SET_PASSWORD_URL, 'Testit123');
