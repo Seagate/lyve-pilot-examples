@@ -67,7 +67,7 @@ token = pilotUtils.login(HOST, USERNAME, PASSWORD)['token'] # This object is the
 pilotUtils.print_bold('\n----- USERS -----')
 response_data = pilotUtils.get_users(HOST, token)
 for i in response_data['data']:
-  print(i['name'])
+  print('User name: %s\n' % i['name'])
 
 
 # Creates a new user in the customer instance. This returns a json object containing

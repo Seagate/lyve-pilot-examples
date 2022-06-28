@@ -38,10 +38,10 @@ def login(host, username, password, customerUUID=None):
 
   return post_helper(None, LOGIN_URL, req_data)
 
-HOST = 'aptest.colo.seagate.com:32324'
-USERNAME = 'admin@seagate.com'
-PASSWORD = '389LyvePilot' 
+HOST = '<pilot.lyve.seagate.com'
+EMAIL = 'email@organization.com'
+PASSWORD = '<password>' 
 
-token = pilotUtils.login(HOST, USERNAME, PASSWORD)['token']
+token = pilotUtils.login(HOST, EMAIL, PASSWORD)['token']
 
 print(token)
