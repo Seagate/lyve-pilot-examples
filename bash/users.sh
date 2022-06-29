@@ -260,4 +260,4 @@ delete_new_user=$(delete_user "$headerJWT" $USERS_URL $single_user_id)
 echo "Delete user status: "$delete_new_user
 
 feed=$(get_feed "$headerJWT" $FEED_URL)
-#echo "The Feed: "$feed
+echo "The Feed: "$feed
