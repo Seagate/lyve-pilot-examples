@@ -47,7 +47,7 @@ name="John Doe"
 # There are two ways to do JSON objects in bash using '' will make it impossible to
 # use variables in the string. Instead use "" and escape the extra "" to create a 
 # valid JSON string
-new_user_data='{"email":"email@organizaton.com","role":"admin","language":"EN","location":"0","name":"John Doe","phone":"123-456-7890"}'
+new_user_data='{"email":"email@organization.com","role":"admin","language":"EN","location":"0","name":"John Doe","phone":"123-456-7890"}'
 
 #  login(username, password) - This currently logs the user in and 
 #          returns the entire JSON object which includes the session JWT and a refresh token.
@@ -155,7 +155,7 @@ accept_EULA(){
 #         password: Desired first password  #4
 # Output - Returns a json object with new user information and a new created password as a key: value pair
 first_password_set(){
-    post_data="{\"token\": \"$3\",\"password\": \"$4\",\"name\": \"New Guy\",\"phone\": \"123-456-7890\",\"location\": \"Longmont, CO\"}"
+    post_data="{\"token\": \"$3\",\"password\": \"$4\",\"name\": \"John Doe\"}"
     echo $(post_helper "$1" "$2" "$post_data")
 }
 
@@ -170,7 +170,7 @@ first_password_set(){
 #         user_ID: ID of user to be changed. Can be generated from id_from_username(headers, url, username)  $3
 #         new_number: New phone number to replace old number  $4
 change_phonenumber(){
-    patch_data="{\"name\": \"New Guy\",\"phone\": \"$4\",\"location\": \"Longmont, CO\"}"
+    patch_data="{\"name\": \"John Doe\",\"phone\": \"$4\"}"
     url=$2"/"$3
     echo $(patch_helper "$1" $url "$patch_data")
 }
@@ -240,15 +240,15 @@ echo "Created User: " $created_user
 OTC=`jq -n "$created_user" | jq '.["user"]' | jq -r '.["OTC"]'`
 echo $OTC
 
-accept_EULA_token=$(accept_EULA "$header" $ACCEPT_EULA_URL $OTC bigtest@seagate.com)
+accept_EULA_token=$(accept_EULA "$header" $ACCEPT_EULA_URL $OTC $email)
 accept_EULA_token=`jq -n "$accept_EULA_token" | jq -r '.["token"]'`
 echo "EULA token: "$accept_EULA_token
 
-new_user_jwt=$(first_password_set "$header" $SET_PASSWORD_URL $accept_EULA_token Testit123)
+new_user_jwt=$(first_password_set "$header" $SET_PASSWORD_URL $accept_EULA_token $password)
 new_user_jwt=`jq -n "$new_user_jwt" | jq -r '.["token"]'`
 echo "New User JWT: "$new_user_jwt
 
-single_user=$(get_user "$headerJWT" $USERS_URL "$name" 62bc949ac0522200101b9bac)
+single_user=$(get_user "$headerJWT" $USERS_URL "$name")
 single_user_id=`jq -n "$single_user" | jq -r '.["id"]'`
 echo "Got single user: "$single_user_id
 
