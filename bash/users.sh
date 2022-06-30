@@ -49,9 +49,10 @@ name="John Doe"
 # valid JSON string
 new_user_data='{"email":"email@organization.com","role":"admin","language":"EN","location":"0","name":"John Doe","phone":"123-456-7890"}'
 
-#  login(username, password) - This currently logs the user in and 
-#          returns the entire JSON object which includes the session JWT and a refresh token.
-#          The refresh token can be used to refresh the JWT when it expires.
+#  login(username, password)
+#       This currently logs the user in and returns the entire JSON 
+#       object which includes the session JWT and a refresh token.
+#       The refresh token can be used to refresh the JWT when it expires.
 #  Input - username: username  $1
 #          password: password  $2
 #  Output - Returns a json web token that is passed through other functions
@@ -66,8 +67,9 @@ login () {
     echo $token
 }
 
-#  get_users(headers, url) - Fetches an array of usernames currently
-#                         saved to customer instance as strings
+#  get_users(headers, url)
+#       Fetches an array of usernames currently
+#       saved to customer instance as strings
 #  Input - headers: the headers for the curl request  $1
 #          url: Desired url endpoint  $2
 #  Output - Returns a string of JSON objects in the form of {name: name}
@@ -78,11 +80,9 @@ get_users(){
     echo $names
 }
 
-# id_from_username(headers, url, username) - Since user ID's are long and
-#                                         randomly generated, users are
-#                                         not expected to remember them.
-#                                         This function finds the ID from
-#                                         username
+# id_from_username(headers, url, username)
+#       Since user ID's are long and randomly generated, users are not
+#       expected to remember them. This function finds the ID from username
 # Input - headers: the headers for the curl request  $1
 #         url: Desired url endpoint  $2
 #         username: Name of the user whose ID is needed  $3
@@ -94,8 +94,8 @@ id_from_username(){
     echo $user_id
 }
 
-#  get_user(headers, url, username, user_ID) - Fetches the json object
-#                                                for one specific user
+#  get_user(headers, url, username, user_ID)
+#       Fetches the json object for one specific user
 #  Input - headers: the headers for the curl request  $1
 #          url: Desired url endpoint  $2
 #          username: name of user to be fetched. Can be left empty
@@ -119,9 +119,9 @@ get_user(){
     echo $user
 }
 
-#  new_user(headers, url, req_data) - This will post a new user to the user list 
-#                                  to the customer instance. User will not have
-#                                  accepted the EULA yet
+#  new_user(headers, url, req_data)
+#       This will post a new user to the user list to the customer
+#       instance. User will not have accepted the EULA yet
 #  Input - headers: the headers for the curl request  $1
 #          url: Desired url endpoint  $2
 #          req_data: json object containing relevant new user information accessible 
@@ -132,10 +132,10 @@ new_user(){
     echo $(post_helper "$1" $2 "$3")
 }
 
-# accept_EULA(headers, url, OTC, email) - Before a new user can set password and
-#                                 start working, the user must accept the 
-#                                 EULA. This requires the OTC returned in the
-#                                 json object returned from new_user(headers, url, req_data)
+# accept_EULA(headers, url, OTC, email)
+#       Before a new user can set password and start working, the
+#       user must accept the EULA. This requires the OTC returned in the
+#       json object returned from new_user(headers, url, req_data)
 # Input - headers: the headers for the curl request  $1
 #         url: Desired url endpoint  $2
 #         OTC: One time token returned in the json object from new_user(headers, url, req_data)  $3
@@ -147,8 +147,9 @@ accept_EULA(){
     echo $(post_helper "$1" $2 $data)
 }
 
-# first_password_set(headers, url, token, password) - Uses token returned from accepting the EULA
-#                                             to set new user password for the first time
+# first_password_set(headers, url, token, password)
+#       Uses token returned from accepting the EULA to set new user 
+#       password for the first time
 # Input - headers: the headers for the curl request  $1
 #         url: Desired url endpoint  $2
 #         token: json web token returned fromt the function accept_EULA(headers, url, OTC, email)  $3
@@ -159,12 +160,11 @@ first_password_set(){
     echo $(post_helper "$1" "$2" "$post_data")
 }
 
-# change_phonenumber(headers, url, user_ID, new_number) - Changes the phone number
-#                                                     saved for specific user. This is
-#                                                     only an example for how user data can 
-#                                                     be changed via API. This change must be
-#                                                     made with a jwt generated from the login
-#                                                     of the user whose information is changing
+# change_phonenumber(headers, url, user_ID, new_number)
+#       Changes the phone number saved for specific user. This is the
+#       only an example for how user data can be changed via API. This
+#       change must be made with a jwt generated from the login of the 
+#       user whose information is changing
 # Input - headers: the headers for the curl request  $1
 #         url: Desired url endpoint  $2
 #         user_ID: ID of user to be changed. Can be generated from id_from_username(headers, url, username)  $3
@@ -175,7 +175,8 @@ change_phonenumber(){
     echo $(patch_helper "$1" $url "$patch_data")
 }
 
-# delete_user(headers, url, id) - Deletes the specified user from the user database for a customer instance
+# delete_user(headers, url, id)
+#       Deletes the specified user from the user database for a customer instance
 # Input - headers: the headers for the curl request  $1
 #         url: Desired url endpoint  $2
 #         user_ID: ID of user to be changed. Can be generated from id_from_username(headers, url, username)  $3
@@ -183,7 +184,8 @@ delete_user(){
     echo $(delete_helper "$1" $2 "/"$3)
 }
 
-# get_feed(headers, url) - Fetches feed for customer instance.
+# get_feed(headers, url)
+#       Fetches feed for customer instance.
 #  Input - headers: the headers for the curl request  $1
 #          url: Desired url endpoint  $2
 # Output - Returns an array of json objects where each object is a transaction from the feed
